@@ -83,6 +83,7 @@ export async function verifyOpenLibraryPackage(packageDir) {
 
   const counts = { editions: 0, works: 0, authors: 0, relationships: 0 };
   const ids = { editions: new Set(), works: new Set(), authors: new Set() };
+  const conflictedIds = { editions: new Set(), works: new Set(), authors: new Set() };
   const expectedEditionWorks = new Set();
   const expectedWorkAuthors = new Set();
   const actualRelations = new Set();
@@ -99,6 +100,7 @@ export async function verifyOpenLibraryPackage(packageDir) {
       const id = record.external_record_id;
       if (ids[name].has(id)) throw new Error(name + ": identifiant source répété " + id + ".");
       ids[name].add(id);
+      if (item.review_reasons.includes("duplicate_source_record_id_conflicting_payloads")) conflictedIds[name].add(id);
       counts[name] += 1;
       if (name === "editions") {
         if (!Array.isArray(item.work_external_ids)) throw new Error("Edition " + id + ": liste Work absente.");
@@ -122,14 +124,16 @@ export async function verifyOpenLibraryPackage(packageDir) {
       const key = relation.from_id + "\u0000" + relation.to_id;
       if (actualRelations.has("ew:" + key)) throw new Error("Lien Edition–Work dupliqué.");
       actualRelations.add("ew:" + key);
-      const resolved = ids.editions.has(relation.from_id) && ids.works.has(relation.to_id);
+      const resolved = ids.editions.has(relation.from_id) && !conflictedIds.editions.has(relation.from_id) &&
+        ids.works.has(relation.to_id) && !conflictedIds.works.has(relation.to_id);
       if (relation.resolved !== resolved) throw new Error("Résolution Edition–Work incorrecte : " + relation.from_id + " → " + relation.to_id + ".");
       if (!resolved) unresolved.editionWork += 1;
     } else if (relation.relation === "work_agents" && relation.from_type === "work" && relation.to_type === "agent") {
       const key = relation.from_id + "\u0000" + relation.to_id;
       if (actualRelations.has("wa:" + key)) throw new Error("Lien Work–Auteur dupliqué.");
       actualRelations.add("wa:" + key);
-      const resolved = ids.works.has(relation.from_id) && ids.authors.has(relation.to_id);
+      const resolved = ids.works.has(relation.from_id) && !conflictedIds.works.has(relation.from_id) &&
+        ids.authors.has(relation.to_id) && !conflictedIds.authors.has(relation.to_id);
       if (relation.resolved !== resolved) throw new Error("Résolution Work–Auteur incorrecte : " + relation.from_id + " → " + relation.to_id + ".");
       if (!resolved) unresolved.workAuthor += 1;
     } else {

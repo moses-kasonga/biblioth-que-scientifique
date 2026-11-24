@@ -1,12 +1,12 @@
-# Bibliothèque scientifique
+# Bibliothèque Scientifique — Nexus Science
 
-Projet de bibliothèque scientifique numérique destiné à être intégré à terme dans Nexus Science.
+Module de bibliothèque scientifique numérique de l’écosystème Nexus Science, développé séparément pour une intégration progressive.
 
 ## Vision
 
 Construire un catalogue scientifique international couvrant les publications de 1720 à 2026, avec une architecture multilingue dès la première version. La cible initiale est de 100 000 notices bibliographiques, avec une architecture conçue pour dépasser 1 000 000 de notices et continuer à croître.
 
-Langues initiales prévues : français, anglais et portugais. Le modèle doit permettre l'ajout d'autres langues.
+Langues initiales : français, anglais, espagnol et portugais. Le modèle doit permettre l'ajout d'autres langues.
 
 ## Architecture cible
 
@@ -55,7 +55,7 @@ La branche `app/minimal-vercel-foundation` ajoute une première application Next
 ### Fonctionnalités présentes
 
 - Page d'accueil responsive.
-- Interface disponible en français, anglais et portugais, avec sélecteur de langue.
+- Interface disponible en français, anglais, espagnol et portugais, avec sélecteur de langue.
 - Présentation de la vision, du périmètre et des principes documentaires.
 - Endpoint de diagnostic `GET /api/health`.
 - Configuration TypeScript stricte et scripts `dev`, `build`, `start` et `typecheck`.

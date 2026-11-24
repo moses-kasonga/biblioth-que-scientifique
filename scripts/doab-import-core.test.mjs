@@ -110,3 +110,39 @@ test("uses a repository UUID as source identity without fabricating a handle URL
   assert.equal(record.externalRecordId, "doab-uuid-only");
   assert.equal(record.recordUrl, null);
 });
+
+
+test("normalizes the official DOAB bulk JSON feed while preserving handle and rights evidence", () => {
+  const payload = {
+    publications: [{
+      metadata: {
+        title: "Foundations of Physics",
+        author: ["A. Example"],
+        editor: [],
+        publisher: "Example Academic Press",
+        language: ["eng"],
+        published: 2024,
+        modified: "2026-11-20T10:00:00Z",
+        subject: ["Physics", "Astronomy"],
+        identifier: "https://directory.doabooks.org/handle/20.500.12854/26303",
+        isbn: ["978-0-306-40615-7"],
+        doi: "10.1234/Example.DOI",
+        licence: "https://creativecommons.org/licenses/by/4.0/",
+      },
+      links: {},
+      images: [],
+    }],
+  };
+  const [record] = normalizeDoabPayload(payload);
+  assert.equal(record.externalRecordId, "20.500.12854/26303");
+  assert.equal(record.recordUrl, "https://hdl.handle.net/20.500.12854/26303");
+  assert.equal(record.title, "Foundations of Physics");
+  assert.equal(record.publicationYear, 2024);
+  assert.equal(record.language, "en");
+  assert.deepEqual(record.authors, ["A. Example"]);
+  assert.deepEqual(record.isbns, ["9780306406157"]);
+  assert.deepEqual(record.dois, ["10.1234/example.doi"]);
+  assert.deepEqual(record.rightsEvidence, ["https://creativecommons.org/licenses/by/4.0/"]);
+  assert.equal(record.recordVersion, "2026-11-20T10:00:00Z");
+  assert.deepEqual(record.issues, []);
+});

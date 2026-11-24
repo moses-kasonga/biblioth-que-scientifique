@@ -5,6 +5,7 @@ import { createGunzip } from "node:zlib";
 import { createInterface } from "node:readline";
 import { once } from "node:events";
 import { isAbsolute, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { normalizeIsbn, normalizeLanguage, parsePublicationYear } from "./doab-import-core.mjs";
 
 const SCIENCE_SUBJECT = /(science|scientific|mathemat|math[eé]m|physic|physique|qu[ií]mic|chemistry|biolog|medicine|medical|m[eé]decine|ingenier|engineering|computer science|informatique|informatics|geolog|geoscience|astronom|statistics|statistique|social sciences|sciences sociales|economics|[eé]conomie)/i;
@@ -280,7 +281,9 @@ async function main() {
   }, null, 2) + "\n");
 }
 
-main().catch((error) => {
-  process.stderr.write((error instanceof Error ? error.message : String(error)) + "\n");
-  process.exitCode = 1;
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    process.stderr.write((error instanceof Error ? error.message : String(error)) + "\n");
+    process.exitCode = 1;
+  });
+}

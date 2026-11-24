@@ -71,7 +71,7 @@ test("streams edition and work dumps into separate JSONL files", async () => {
     assert.equal(report.editions.scanned, 3);
     assert.equal(report.editions.selected, 2);
     assert.equal(report.editions.nonScientific, 1);
-    assert.equal(report.editions.validIsbnValues, 2);
+    assert.equal(report.editions.validIsbnValues, 3);
     assert.equal(report.linkedWorks.selected, 2);
     assert.equal(report.linkedWorks.unresolvedWorkKeys, 0);
 

@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "test": "node --check scripts/doab-import-core.mjs && node --check scripts/openalex-import-core.mjs && node --check scripts/hal-import-core.mjs && node --check scripts/openlibrary-import-core.mjs && node --check scripts/fetch-openlibrary.mjs && node --check scripts/run-historical-sampling.mjs && node --check scripts/fetch-openalex.mjs && node --check scripts/fetch-hal.mjs && node --check scripts/doab-json-feed-core.mjs && node --check scripts/import-doab.mjs && node --check scripts/fetch-doab-json.mjs && node --check scripts/fetch-doab-json-feed.mjs && node --test scripts/*.test.mjs",
+    "test": "node --check scripts/doab-import-core.mjs && node --check scripts/openalex-import-core.mjs && node --check scripts/hal-import-core.mjs && node --check scripts/openlibrary-import-core.mjs && node --check scripts/fetch-openlibrary.mjs && node --check scripts/run-historical-sampling.mjs && node --check scripts/scan-openlibrary-dump.mjs && node --check scripts/fetch-openalex.mjs && node --check scripts/fetch-hal.mjs && node --check scripts/doab-json-feed-core.mjs && node --check scripts/import-doab.mjs && node --check scripts/fetch-doab-json.mjs && node --check scripts/fetch-doab-json-feed.mjs && node --test scripts/*.test.mjs",
     "prebuild": "npm test",
     "build": "next build",
     "start": "next start",

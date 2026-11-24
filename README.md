@@ -46,3 +46,39 @@ Langues initiales prévues : français, anglais et portugais. Le modèle doit pe
 4. Exécuter les tests d'intégrité, de droits, de cycles et d'isolation RLS.
 5. Corriger et documenter les résultats avant toute demande d'approbation de production.
 6. Configurer un projet Vercel distinct de celui de Nexus Science.
+
+
+## Application web — fondation Vercel
+
+La branche `app/minimal-vercel-foundation` ajoute une première application Next.js (App Router) destinée à être déployée séparément sur Vercel.
+
+### Fonctionnalités présentes
+
+- Page d'accueil responsive.
+- Interface disponible en français, anglais et portugais, avec sélecteur de langue.
+- Présentation de la vision, du périmètre et des principes documentaires.
+- Endpoint de diagnostic `GET /api/health`.
+- Configuration TypeScript stricte et scripts `dev`, `build`, `start` et `typecheck`.
+
+### Limites volontaires de cette fondation
+
+- Le catalogue n'est pas encore connecté à Neon.
+- Aucune migration SQL n'est exécutée par l'application.
+- `/api/health` indique uniquement si `DATABASE_URL` est configurée ; il ne teste pas la connexion à la base.
+- Aucun mécanisme d'authentification n'est activé. L'identité devra être intégrée via Nexus Science après définition et validation du contrat de jeton.
+- Aucune notice fictive n'est présentée comme un résultat de recherche réel.
+
+### Déploiement initial
+
+Dans Vercel, importer le dépôt `moses-kasonga/biblioth-que-scientifique` et sélectionner la branche `app/minimal-vercel-foundation`. Le framework doit être détecté comme **Next.js**. Aucun secret ni variable de connexion Neon n'est nécessaire pour ce premier déploiement de l'interface.
+
+Commandes locales :
+
+```bash
+npm install
+npm run typecheck
+npm run build
+npm run start
+```
+
+Avant d'activer l'accès aux données, la connexion Neon devra être ajoutée côté serveur, après validation des migrations et des autorisations. Ne jamais exposer une chaîne de connexion ou un secret dans le navigateur.

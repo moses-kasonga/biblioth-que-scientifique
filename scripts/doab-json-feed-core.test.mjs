@@ -59,6 +59,24 @@ test("filters selected languages while scanning until the requested number is re
   assert.equal(result.stopReason, "limit_reached");
 });
 
+test("preserves braces after escaped quotes and backslashes inside JSON strings", async () => {
+  const quotedTitle = 'Quoted "closing } brace" title';
+  const backslashPath = "C:\\books\\Nexus";
+  const json = JSON.stringify({
+    publications: [
+      { id: 1, metadata: { title: quotedTitle, path: backslashPath } },
+    ],
+  });
+  const result = await readJsonArrayItems(streamFromString(json, 3), {
+    limit: 1,
+    arrayKey: "publications",
+  });
+
+  assert.equal(result.records.length, 1);
+  assert.equal(result.records[0].metadata.title, quotedTitle);
+  assert.equal(result.records[0].metadata.path, backslashPath);
+});
+
 test("rejects a truncated JSON object", async () => {
   await assert.rejects(
     readJsonArrayItems(streamFromString('{"publications":[{"id":1,"title":"unfinished'), {

@@ -390,3 +390,18 @@ h1 {
   .home-nav { display:none; }
   .text-link.secondary { margin-left:0; }
 }
+
+
+.catalogue-results { display:grid; gap:12px; margin-top:20px; }
+.catalogue-result-card { display:flex; justify-content:space-between; align-items:center; gap:22px; padding:22px; border:1px solid var(--line); border-radius:14px; background:var(--surface); }
+.catalogue-result-card h2 { margin:7px 0; color:var(--ink); font:500 24px var(--serif); }
+.catalogue-result-card p { max-width:75ch; margin:6px 0; color:var(--muted); font-size:12px; line-height:1.7; }
+.catalogue-result-card .library-eyebrow { margin:0; }
+.catalogue-result-year { font-weight:700; font-variant-numeric:tabular-nums; }
+.catalogue-result-tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+.catalogue-result-tags span { padding:5px 9px; border-radius:999px; background:var(--soft); color:var(--green); font-size:10px; font-weight:700; }
+.catalogue-empty-results { padding:24px; border:1px dashed var(--line); border-radius:14px; color:var(--muted); text-align:center; font-size:13px; }
+@media(max-width:620px) {
+  .catalogue-result-card { align-items:flex-start; flex-direction:column; padding:18px; }
+  .catalogue-result-card h2 { font-size:21px; }
+}

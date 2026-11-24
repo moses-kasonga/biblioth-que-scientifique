@@ -23,14 +23,26 @@ Langues initiales prévues : français, anglais et portugais. Le modèle doit pe
 - Ne pas créer de système d'authentification indépendant pour la bibliothèque.
 - Vérifier les droits d'accès aux ressources numériques indépendamment de leur disponibilité technique.
 
+## Capacité du catalogue
+
+- Objectif initial : 100 000 notices bibliographiques.
+- Capacité de conception : 1 000 000 de notices et davantage, sans plafond artificiel.
+- Les notices, œuvres, expressions, éditions et ressources numériques sont comptées séparément. Une notice ne garantit pas l'accès à un fichier intégral.
+
 ## État du projet
 
-Le dépôt accueille la documentation et la préparation technique. Aucune migration SQL de production n'est incluse dans cette initialisation.
+- Audit de cohérence SQL-ready v0.3 documenté.
+- Branche GitHub de préparation : `docs/initial-foundation`.
+- Migrations SQL 001 à 008 rédigées dans `db/migrations/`.
+- Branche Neon isolée de développement créée depuis `production`.
+- **Aucune migration SQL n'a encore été exécutée**, y compris sur la branche de développement.
+- La recherche avancée (migration 009) reste différée jusqu'à validation des parcours et du classement.
 
 ## Prochaines étapes
 
-1. Finaliser et valider le dictionnaire de données.
-2. Documenter l'architecture applicative et les conventions de développement.
-3. Préparer les migrations SQL versionnées.
-4. Tester les migrations sur une branche Neon non productive.
-5. Configurer un projet Vercel distinct de celui de Nexus Science.
+1. Revue statique et validation syntaxique des migrations 001 à 008.
+2. Préparer l'environnement de test et les rôles SQL séparés.
+3. Exécuter les migrations sur la branche Neon de développement uniquement.
+4. Exécuter les tests d'intégrité, de droits, de cycles et d'isolation RLS.
+5. Corriger et documenter les résultats avant toute demande d'approbation de production.
+6. Configurer un projet Vercel distinct de celui de Nexus Science.

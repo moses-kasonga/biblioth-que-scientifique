@@ -27,9 +27,9 @@ const copy = {
     p1: "Des notices bibliographiques fiables, même lorsqu’un texte intégral n’est pas disponible.",
     p2: "Une distinction claire entre œuvres, traductions, éditions et ressources numériques.",
     p3: "Un accès aux documents déterminé par leurs droits et leurs conditions de consultation.",
-    status: "Projet en construction",
+    status: "Socle documentaire connecté", 
     statusText:
-      "Le socle applicatif est en préparation. Le catalogue et les services connectés seront activés après validation du schéma de données.",
+      "Le schéma documentaire est déployé sur l’environnement de développement Neon. Le premier lot de notices réelles sera importé après validation des contrôles de qualité et de provenance.",
     statusTag: "FONDATIONS",
     footerCopyright: "Nexus Science · Bibliothèque Scientifique",
     footer: "Un projet de Nexus Science conçu pour grandir, sans frontières linguistiques."
@@ -56,9 +56,9 @@ const copy = {
     p1: "Reliable bibliographic records, even when full text is unavailable.",
     p2: "A clear distinction between works, translations, editions and digital resources.",
     p3: "Access governed by each resource’s rights and consultation conditions.",
-    status: "Project in development",
+    status: "Documentary foundation connected", 
     statusText:
-      "The application foundation is being prepared. The catalogue and connected services will be enabled after the data schema is validated.",
+      "The documentary schema is deployed to the Neon development environment. The first real record batch will be imported after quality and provenance checks are approved.",
     statusTag: "FOUNDATION",
     footerCopyright: "Nexus Science · Scientific Library",
     footer: "A Nexus Science project designed to grow, across language borders."
@@ -85,9 +85,9 @@ const copy = {
     p1: "Registros bibliográficos fiables, incluso cuando el texto completo no está disponible.",
     p2: "Una distinción clara entre obras, traducciones, ediciones y recursos digitales.",
     p3: "El acceso a los documentos depende de sus derechos y de sus condiciones de consulta.",
-    status: "Proyecto en construcción",
+    status: "Base documental conectada", 
     statusText:
-      "La base de la aplicación está en preparación. El catálogo y los servicios conectados se activarán después de validar el esquema de datos.",
+      "El esquema documental está desplegado en el entorno de desarrollo de Neon. El primer lote de registros reales se importará tras validar la calidad y la procedencia.",
     statusTag: "FUNDAMENTOS",
     footerCopyright: "Nexus Science · Biblioteca Científica",
     footer: "Un proyecto de Nexus Science diseñado para crecer, sin fronteras lingüísticas."
@@ -114,9 +114,9 @@ const copy = {
     p1: "Registos bibliográficos fiáveis, mesmo quando o texto integral não está disponível.",
     p2: "Uma distinção clara entre obras, traduções, edições e recursos digitais.",
     p3: "O acesso aos documentos é determinado pelos respetivos direitos e condições de consulta.",
-    status: "Projeto em desenvolvimento",
+    status: "Base documental ligada", 
     statusText:
-      "A base da aplicação está a ser preparada. O catálogo e os serviços ligados serão ativados após a validação do esquema de dados.",
+      "O esquema documental está implantado no ambiente de desenvolvimento Neon. O primeiro lote de registos reais será importado após a validação da qualidade e da proveniência.",
     statusTag: "ESTRUTURA",
     footerCopyright: "Nexus Science · Biblioteca Científica",
     footer: "Um projeto da Nexus Science concebido para crescer, sem fronteiras linguísticas."

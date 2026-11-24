@@ -69,6 +69,35 @@ test("rejects a missing Edition-to-Work edge even when its checksum is updated",
   } finally { await rm(f.dir, { recursive: true, force: true }); }
 });
 
+
+
+test("accepts unresolved links whose source key is explicitly conflicted", async () => {
+  const f = await fixture();
+  try {
+    const edition = line({
+      source_record: { record_type: "edition", external_record_id: "OL100M" },
+      work_external_ids: ["OL10W"], review_required: true,
+      review_reasons: ["duplicate_source_record_id_conflicting_payloads"],
+    });
+    const relationships = line({
+      from_type: "edition", from_id: "OL100M", to_type: "work", to_id: "OL10W",
+      relation: "edition_works", resolved: false, review_required: true,
+    }) + line({
+      from_type: "work", from_id: "OL10W", to_type: "agent", to_id: "OL1A",
+      relation: "work_agents", role_code: "author", resolved: true, review_required: false,
+    });
+    await writeFile(join(f.dir, f.files.editions), edition);
+    await writeFile(join(f.dir, f.files.relationships), relationships);
+    f.manifest.outputs.editions.sha256 = hash(edition);
+    f.manifest.outputs.relationships.sha256 = hash(relationships);
+    f.manifest.quality.unresolvedEditionWorkLinks = 1;
+    await writeFile(join(f.dir, "manifest.json"), JSON.stringify(f.manifest, null, 2));
+    const result = await verifyOpenLibraryPackage(f.dir);
+    assert.equal(result.valid, true);
+    assert.equal(result.unresolved.editionWork, 1);
+  } finally { await rm(f.dir, { recursive: true, force: true }); }
+});
+
 test("rejects manifest counts that do not match the JSONL records", async () => {
   const f = await fixture();
   try {

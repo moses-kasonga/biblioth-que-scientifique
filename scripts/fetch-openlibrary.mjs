@@ -64,17 +64,17 @@ async function main() {
     start: payload.start ?? null,
     docs: payload.docs,
   };
-  await writeFile(args.output, JSON.stringify(output, null, 2) + "\\n", "utf8");
+  await writeFile(args.output, JSON.stringify(output, null, 2) + "\n", "utf8");
   process.stdout.write(JSON.stringify({
     source: "openlibrary",
     output: args.output,
     selected: payload.docs.length,
     totalMatching: payload.numFound ?? null,
     note: "Échantillon de découverte limité ; utiliser les dumps officiels pour le bulk.",
-  }, null, 2) + "\\n");
+  }, null, 2) + "\n");
 }
 
 main().catch((error) => {
-  process.stderr.write((error instanceof Error ? error.message : String(error)) + "\\n");
+  process.stderr.write((error instanceof Error ? error.message : String(error)) + "\n");
   process.exitCode = 1;
 });

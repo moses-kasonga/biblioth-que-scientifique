@@ -131,7 +131,7 @@ async function main() {
         matchingCount,
         selected: records.length,
         review: records.filter((r) => r.issues?.length).length,
-      }) + "\\n");
+      }) + "\n");
     }
   }
 
@@ -167,16 +167,16 @@ async function main() {
     },
   };
   const reportPath = args.outDir + "/historical-coverage-report.json";
-  await writeFile(reportPath, JSON.stringify(report, null, 2) + "\\n", "utf8");
+  await writeFile(reportPath, JSON.stringify(report, null, 2) + "\n", "utf8");
   process.stdout.write(JSON.stringify({
     report: reportPath,
     batches: results.length,
     totalRecords: results.reduce((sum, item) => sum + item.summary.selected, 0),
     mode: report.mode,
-  }, null, 2) + "\\n");
+  }, null, 2) + "\n");
 }
 
 main().catch((error) => {
-  process.stderr.write((error instanceof Error ? error.message : String(error)) + "\\n");
+  process.stderr.write((error instanceof Error ? error.message : String(error)) + "\n");
   process.exitCode = 1;
 });

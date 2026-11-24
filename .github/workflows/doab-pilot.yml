@@ -6,19 +6,22 @@ on:
       - app/minimal-vercel-foundation
     paths:
       - .github/workflows/doab-pilot.yml
-      - scripts/fetch-doab-json.mjs
+      - scripts/fetch-doab-json-feed.mjs
+      - scripts/doab-json-feed-core.mjs
+      - scripts/doab-import-core.mjs
+      - scripts/import-doab.mjs
   workflow_dispatch:
     inputs:
-      query:
-        description: DOAB search expression
-        required: true
-        default: mathematics AND physics
-        type: string
       limit:
         description: Maximum number of records (1–500)
         required: true
         default: "25"
         type: string
+      all_languages:
+        description: Include all DOAB languages (otherwise FR/EN/ES/PT plus unknown languages)
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -31,7 +34,7 @@ jobs:
   collect-and-dry-run:
     if: ${{ github.ref == 'refs/heads/app/minimal-vercel-foundation' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 12
     steps:
       - name: Check out the application branch
         uses: actions/checkout@v4
@@ -41,60 +44,38 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Collect DOAB bibliographic metadata
+      - name: Collect from the official DOAB CC0 JSON feed
         env:
-          DOAB_QUERY: ${{ inputs.query || 'mathematics AND physics' }}
           DOAB_LIMIT: ${{ inputs.limit || '25' }}
+          DOAB_ALL_LANGUAGES: ${{ inputs.all_languages || 'false' }}
         run: |
-          node scripts/fetch-doab-json.mjs \
-            --query "$DOAB_QUERY" \
-            --limit "$DOAB_LIMIT" \
-            --output ./doab-batch.json
+          if [ "$DOAB_ALL_LANGUAGES" = "true" ]; then
+            node scripts/fetch-doab-json-feed.mjs \
+              --limit "$DOAB_LIMIT" \
+              --all-languages \
+              --output ./doab-batch.json
+          else
+            node scripts/fetch-doab-json-feed.mjs \
+              --limit "$DOAB_LIMIT" \
+              --output ./doab-batch.json
+          fi
 
       - name: Run importer in dry-run mode
+        env:
+          DOAB_LIMIT: ${{ inputs.limit || '25' }}
         run: |
           node scripts/import-doab.mjs \
             --input ./doab-batch.json \
-            --max-records 25 \
+            --max-records "$DOAB_LIMIT" \
             --dry-run > ./doab-dry-run.log 2>&1
           cat ./doab-dry-run.log
 
-      - name: Probe official DOAB CC0 metadata feeds after REST rejection
-        if: failure()
-        run: |
-          mkdir -p doab-feed-probe
-          for name in DOAB.json DOAB_KBART_books.tsv DOAB.csv; do
-            url="https://memo.doabooks.org/file/oapen/$name"
-            {
-              echo "### $name"
-              curl --silent --show-error --head --location --max-time 20 "$url" || true
-              echo
-            } >> doab-feed-probe/headers.txt
-          done
-          # Read small prefixes only; some file servers ignore Range requests.
-          for entry in "DOAB.json:json-prefix.json" "DOAB.csv:csv-prefix.csv" "DOAB_KBART_books.tsv:kbart-prefix.tsv"; do
-            name="${entry%%:*}"
-            output="${entry#*:}"
-            curl --silent --show-error --location --range 0-8191 \
-              --max-filesize 1048576 --max-time 30 \
-              "https://memo.doabooks.org/file/oapen/$name" \
-              --output "doab-feed-probe/$output" || true
-          done
-          for file in doab-feed-probe/json-prefix.json doab-feed-probe/csv-prefix.csv doab-feed-probe/kbart-prefix.tsv; do
-            if [ -f "$file" ]; then
-              echo "### $file"
-              head -n 3 "$file" | cut -c1-500
-            fi
-          done
-
-      - name: Preserve source batch, reports, and feed probe
-        if: always()
+      - name: Preserve source batch and dry-run report
         uses: actions/upload-artifact@v4
         with:
           name: doab-pilot-${{ github.run_id }}
           path: |
             doab-batch.json
             doab-dry-run.log
-            doab-feed-probe/*
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 7

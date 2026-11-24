@@ -11,11 +11,13 @@ const copy = {
     metaTitle: "Bibliothèque Scientifique — Nexus Science",
     metaDescription: "La bibliothèque scientifique internationale de Nexus Science : découvrez les œuvres, leurs traductions, leurs éditions et les ressources numériques accessibles dans le respect des droits.",
     navLabel: "Choisir la langue",
+    catalogueNav: "Catalogue",
+    resourcesNav: "Ressources",
     eyebrow: "UNE BIBLIOTHÈQUE DE NEXUS SCIENCE",
     title: "La connaissance n’a pas de frontières.",
     intro:
       "La bibliothèque scientifique internationale de Nexus Science permet de repérer les œuvres, de comprendre leurs éditions et d’accéder aux ressources numériques disponibles dans le respect des droits.",
-    explore: "Explorer le projet",
+    explore: "Explorer le catalogue",
     visionKicker: "01 / VISION",
     methodKicker: "02 / MÉTHODE",
     scope: "Notre ambition",
@@ -38,11 +40,13 @@ const copy = {
     metaTitle: "Scientific Library — Nexus Science",
     metaDescription: "Explore works, translations, editions and rights-aware digital resources through the Nexus Science international scientific library.",
     navLabel: "Choose language",
+    catalogueNav: "Catalogue",
+    resourcesNav: "Resources",
     eyebrow: "A LIBRARY BY NEXUS SCIENCE",
     title: "Knowledge has no borders.",
     intro:
       "Nexus Science’s international scientific library helps visitors discover works, understand their editions, and access digital resources in accordance with their rights.",
-    explore: "Explore the project",
+    explore: "Explore the catalogue",
     visionKicker: "01 / VISION",
     methodKicker: "02 / METHOD",
     scope: "Our ambition",
@@ -65,11 +69,13 @@ const copy = {
     metaTitle: "Biblioteca Científica — Nexus Science",
     metaDescription: "Descubre obras, traducciones, ediciones y recursos digitales cuyo acceso respeta los derechos, en la biblioteca científica internacional de Nexus Science.",
     navLabel: "Elegir idioma",
+    catalogueNav: "Catálogo",
+    resourcesNav: "Recursos",
     eyebrow: "UNA BIBLIOTECA DE NEXUS SCIENCE",
     title: "El conocimiento no tiene fronteras.",
     intro:
       "La biblioteca científica internacional de Nexus Science permite descubrir obras, conocer sus ediciones y acceder a los recursos digitales disponibles, respetando los derechos correspondientes.",
-    explore: "Explorar el proyecto",
+    explore: "Explorar el catálogo",
     visionKicker: "01 / VISIÓN",
     methodKicker: "02 / MÉTODO",
     scope: "Nuestra ambición",
@@ -92,11 +98,13 @@ const copy = {
     metaTitle: "Biblioteca Científica — Nexus Science",
     metaDescription: "Explore obras, traduções, edições e recursos digitais, com acesso definido pelos respetivos direitos, na biblioteca científica internacional da Nexus Science.",
     navLabel: "Escolher idioma",
+    catalogueNav: "Catálogo",
+    resourcesNav: "Recursos",
     eyebrow: "UMA BIBLIOTECA DA NEXUS SCIENCE",
     title: "O conhecimento não tem fronteiras.",
     intro:
       "A biblioteca científica internacional da Nexus Science permite descobrir obras, compreender as suas edições e aceder aos recursos digitais disponíveis, respeitando os respetivos direitos.",
-    explore: "Conhecer o projeto",
+    explore: "Explorar o catálogo",
     visionKicker: "01 / VISÃO",
     methodKicker: "02 / MÉTODO",
     scope: "A nossa ambição",
@@ -166,6 +174,10 @@ export default function HomeContent() {
             <span>{t.brandModule}</span>
           </span>
         </a>
+        <nav className="home-nav" aria-label="Nexus Science">
+          <a href="/catalogue">{t.catalogueNav}</a>
+          <a href="/ressources">{t.resourcesNav}</a>
+        </nav>
         <nav className="language-switch" aria-label={t.navLabel}>
           {languages.map((item) => (
             <button
@@ -186,7 +198,7 @@ export default function HomeContent() {
           <p className="eyebrow"><span />{t.eyebrow}</p>
           <h1>{t.title}</h1>
           <p className="hero-intro">{t.intro}</p>
-          <a className="text-link" href="#project">{t.explore}<span aria-hidden="true"> ↗</span></a>
+          <a className="text-link" href="/catalogue">{t.explore}<span aria-hidden="true"> ↗</span></a>
         </div>
         <div className="hero-art" aria-hidden="true">
           <div className="orbit orbit-one" />

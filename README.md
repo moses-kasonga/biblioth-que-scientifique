@@ -4,7 +4,7 @@ Projet de bibliothèque scientifique numérique destiné à être intégré à t
 
 ## Vision
 
-Construire un catalogue scientifique international couvrant les publications de 1720 à 2026, avec une architecture multilingue dès la première version.
+Construire un catalogue scientifique international couvrant les publications de 1720 à 2026, avec une architecture multilingue dès la première version. La cible initiale est de 100 000 notices bibliographiques, avec une architecture conçue pour dépasser 1 000 000 de notices et continuer à croître.
 
 Langues initiales prévues : français, anglais et portugais. Le modèle doit permettre l'ajout d'autres langues.
 

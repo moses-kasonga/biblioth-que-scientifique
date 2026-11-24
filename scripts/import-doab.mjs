@@ -186,6 +186,10 @@ async function importOne(pool, sourceSystemId, jobId, record) {
     sourceRecordId = saved.rows[0].source_record_id;
 
     if (!record.title) {
+      await client.query(
+        "UPDATE bibliotheque.source_records SET record_status = 'review_required' WHERE source_record_id = $1",
+        [sourceRecordId]
+      );
       await saveImportRecord(client, jobId, sourceRecordId, "review_required", "Titre absent ; payload source conservé, aucun ouvrage créé.");
       await client.query("COMMIT");
       return "review_required";
@@ -197,6 +201,10 @@ async function importOne(pool, sourceSystemId, jobId, record) {
       [sourceRecordId]
     );
     if (alreadyLinked.rows.length) {
+      await client.query(
+        "UPDATE bibliotheque.source_records SET record_status = 'linked' WHERE source_record_id = $1",
+        [sourceRecordId]
+      );
       await saveImportRecord(client, jobId, sourceRecordId, "skipped", "Cette version source est déjà liée ; relance idempotente.");
       await client.query("COMMIT");
       return "skipped";
@@ -209,6 +217,10 @@ async function importOne(pool, sourceSystemId, jobId, record) {
         if (link.expression_id) await saveSourceLink(client, sourceRecordId, "expression", link.expression_id, "supports");
         if (link.edition_id) await saveSourceLink(client, sourceRecordId, "edition", link.edition_id, "supports");
       }
+      await client.query(
+        "UPDATE bibliotheque.source_records SET record_status = 'review_required' WHERE source_record_id = $1",
+        [sourceRecordId]
+      );
       await saveImportRecord(client, jobId, sourceRecordId, "review_required", "Nouvelle version d'un record déjà importé ; la notice canonique n'a pas été modifiée.");
       await client.query("COMMIT");
       return "review_required";
@@ -222,6 +234,10 @@ async function importOne(pool, sourceSystemId, jobId, record) {
           await saveSourceLink(client, sourceRecordId, "edition", match.editionId, "same_as", "identifier");
         }
       }
+      await client.query(
+        "UPDATE bibliotheque.source_records SET record_status = 'review_required' WHERE source_record_id = $1",
+        [sourceRecordId]
+      );
       await saveImportRecord(client, jobId, sourceRecordId, "review_required", "ISBN/DOI déjà présent ; rapprochement suggéré, aucune fusion automatique.");
       await client.query("COMMIT");
       return "review_required";
@@ -359,6 +375,10 @@ async function importOne(pool, sourceSystemId, jobId, record) {
     const detail = record.issues.length
       ? "Notice créée en statut provisional. Contrôles requis : " + record.issues.join(", ")
       : "Notice provisoire créée depuis DOAB ; les droits des fichiers restent à vérifier.";
+    await client.query(
+      "UPDATE bibliotheque.source_records SET record_status = $2 WHERE source_record_id = $1",
+      [sourceRecordId, outcome === "created" ? "linked" : "review_required"]
+    );
     await saveImportRecord(client, jobId, sourceRecordId, outcome, detail);
     await client.query("COMMIT");
     return outcome;

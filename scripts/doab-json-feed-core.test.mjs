@@ -83,3 +83,32 @@ test("rejects invalid limits before consuming the stream", async () => {
     /limit doit être un entier positif/
   );
 });
+
+test("supports resumable offsets after applying the language filter", async () => {
+  const json = JSON.stringify({
+    publications: [
+      { id: 1, metadata: { language: ["eng"] } },
+      { id: 2, metadata: { language: ["pol"] } },
+      { id: 3, metadata: { language: ["fra"] } },
+      { id: 4, metadata: { language: ["eng"] } },
+    ],
+  });
+  const result = await readJsonArrayItems(streamFromString(json, 13), {
+    skip: 1,
+    limit: 2,
+    acceptRecord: (record) => record.metadata.language[0] !== "pol",
+  });
+
+  assert.deepEqual(result.records.map((record) => record.id), [3, 4]);
+  assert.equal(result.scanned, 4);
+  assert.equal(result.rejected, 1);
+  assert.equal(result.skippedByOffset, 1);
+  assert.equal(result.stopReason, "limit_reached");
+});
+
+test("rejects negative stream offsets", async () => {
+  await assert.rejects(
+    readJsonArrayItems(streamFromString('{"publications":[]}'), { skip: -1 }),
+    /skip doit être un entier positif ou nul/
+  );
+});

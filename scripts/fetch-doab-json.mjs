@@ -25,7 +25,7 @@ function parseArgs(argv) {
 function printHelp() {
   process.stdout.write(
     "Récupération ciblée de métadonnées DOAB (JSON uniquement)\n\n" +
-    "node scripts/fetch-doab-json.mjs --query 'mathematics AND physics' --output ./doab-batch.json\n\n" +
+    "node scripts/fetch-doab-json.mjs --query 'mathematics AND physics' --limit 25 --output ./doab-batch.json\n\n" +
     "Une seule requête ciblée est envoyée. Aucun fichier PDF/EPUB n'est téléchargé.\n"
   );
 }

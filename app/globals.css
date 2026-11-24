@@ -48,8 +48,25 @@ a { color: inherit; text-decoration: none; }
   font-family: Georgia, serif;
   font-size: 23px;
 }
-.brand-name { font-size: 14px; letter-spacing: -.02em; }
-.brand-name strong { font-weight: 700; }
+.brand-name {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 10px;
+  line-height: 1.1;
+  letter-spacing: .02em;
+}
+.brand-name strong {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .09em;
+}
+.brand-name span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
 
 .language-switch {
   display: flex;

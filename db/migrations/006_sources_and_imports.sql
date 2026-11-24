@@ -71,6 +71,25 @@ CREATE INDEX source_record_links_asset_idx ON bibliotheque.source_record_links(d
 CREATE INDEX source_record_links_agent_idx ON bibliotheque.source_record_links(agent_id) WHERE agent_id IS NOT NULL;
 CREATE INDEX source_record_links_subject_idx ON bibliotheque.source_record_links(subject_id) WHERE subject_id IS NOT NULL;
 
+CREATE UNIQUE INDEX source_record_links_source_work_type_uq
+  ON bibliotheque.source_record_links(source_record_id, work_id, link_type)
+  WHERE work_id IS NOT NULL;
+CREATE UNIQUE INDEX source_record_links_source_expression_type_uq
+  ON bibliotheque.source_record_links(source_record_id, expression_id, link_type)
+  WHERE expression_id IS NOT NULL;
+CREATE UNIQUE INDEX source_record_links_source_edition_type_uq
+  ON bibliotheque.source_record_links(source_record_id, edition_id, link_type)
+  WHERE edition_id IS NOT NULL;
+CREATE UNIQUE INDEX source_record_links_source_asset_type_uq
+  ON bibliotheque.source_record_links(source_record_id, digital_asset_id, link_type)
+  WHERE digital_asset_id IS NOT NULL;
+CREATE UNIQUE INDEX source_record_links_source_agent_type_uq
+  ON bibliotheque.source_record_links(source_record_id, agent_id, link_type)
+  WHERE agent_id IS NOT NULL;
+CREATE UNIQUE INDEX source_record_links_source_subject_type_uq
+  ON bibliotheque.source_record_links(source_record_id, subject_id, link_type)
+  WHERE subject_id IS NOT NULL;
+
 CREATE TABLE bibliotheque.import_jobs (
   import_job_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   source_system_id UUID NOT NULL REFERENCES bibliotheque.source_systems(source_system_id) ON DELETE RESTRICT,

@@ -48,6 +48,12 @@ test("normalizes a DSpace-style DOAB record without losing provenance fields", (
   assert.deepEqual(record.disciplines, ["physics"]);
   assert.deepEqual(record.isbns, ["9780306406157"]);
   assert.deepEqual(record.dois, ["10.1234/example.doi"]);
+  assert.deepEqual(record.isbnIdentifiers, [
+    { sourceValue: "978-0-306-40615-7", normalizedValue: "9780306406157" },
+  ]);
+  assert.deepEqual(record.doiIdentifiers, [
+    { sourceValue: "https://doi.org/10.1234/Example.DOI", normalizedValue: "10.1234/example.doi" },
+  ]);
   assert.deepEqual(record.rightsEvidence, ["https://creativecommons.org/licenses/by/4.0/"]);
   assert.equal(record.raw, dspaceRecord._embedded.searchResult._embedded.objects[0]);
   assert.deepEqual(record.issues, []);

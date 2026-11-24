@@ -8,6 +8,8 @@ const copy = {
   fr: {
     brandModule: "Bibliothèque Scientifique",
     brandAria: "Nexus Science — Bibliothèque Scientifique — accueil",
+    metaTitle: "Bibliothèque Scientifique — Nexus Science",
+    metaDescription: "La bibliothèque scientifique internationale de Nexus Science : découvrez les œuvres, leurs traductions, leurs éditions et les ressources numériques accessibles dans le respect des droits.",
     navLabel: "Choisir la langue",
     eyebrow: "UNE BIBLIOTHÈQUE DE NEXUS SCIENCE",
     title: "La connaissance n’a pas de frontières.",
@@ -33,6 +35,8 @@ const copy = {
   en: {
     brandModule: "Scientific Library",
     brandAria: "Nexus Science — Scientific Library — home",
+    metaTitle: "Scientific Library — Nexus Science",
+    metaDescription: "Explore works, translations, editions and rights-aware digital resources through the Nexus Science international scientific library.",
     navLabel: "Choose language",
     eyebrow: "A LIBRARY BY NEXUS SCIENCE",
     title: "Knowledge has no borders.",
@@ -58,6 +62,8 @@ const copy = {
   es: {
     brandModule: "Biblioteca Científica",
     brandAria: "Nexus Science — Biblioteca Científica — inicio",
+    metaTitle: "Biblioteca Científica — Nexus Science",
+    metaDescription: "Descubre obras, traducciones, ediciones y recursos digitales cuyo acceso respeta los derechos, en la biblioteca científica internacional de Nexus Science.",
     navLabel: "Elegir idioma",
     eyebrow: "UNA BIBLIOTECA DE NEXUS SCIENCE",
     title: "El conocimiento no tiene fronteras.",
@@ -83,6 +89,8 @@ const copy = {
   pt: {
     brandModule: "Biblioteca Científica",
     brandAria: "Nexus Science — Biblioteca Científica — início",
+    metaTitle: "Biblioteca Científica — Nexus Science",
+    metaDescription: "Explore obras, traduções, edições e recursos digitais, com acesso definido pelos respetivos direitos, na biblioteca científica internacional da Nexus Science.",
     navLabel: "Escolher idioma",
     eyebrow: "UMA BIBLIOTECA DA NEXUS SCIENCE",
     title: "O conhecimento não tem fronteiras.",
@@ -120,15 +128,20 @@ export default function HomeContent() {
 
   useEffect(() => {
     document.documentElement.lang = language;
-    document.title =
-      language === "fr"
-        ? "Bibliothèque Scientifique — Nexus Science"
-        : language === "en"
-          ? "Scientific Library — Nexus Science"
-          : language === "es"
-            ? "Biblioteca Científica — Nexus Science"
-            : "Biblioteca Científica — Nexus Science";
-  }, [language]);
+    document.title = t.metaTitle;
+
+    const updateMeta = (selector: string, value: string) => {
+      document.querySelector(selector)?.setAttribute("content", value);
+    };
+
+    updateMeta('meta[name="description"]', t.metaDescription);
+    updateMeta('meta[name="application-name"]', t.metaTitle);
+    updateMeta('meta[property="og:title"]', t.metaTitle);
+    updateMeta('meta[property="og:description"]', t.metaDescription);
+    updateMeta('meta[property="og:site_name"]', t.metaTitle);
+    updateMeta('meta[name="twitter:title"]', t.metaTitle);
+    updateMeta('meta[name="twitter:description"]', t.metaDescription);
+  }, [language, t.metaTitle, t.metaDescription]);
 
   return (
     <main className="site-shell" lang={language}>

@@ -54,15 +54,20 @@ La branche `app/minimal-vercel-foundation` ajoute une première application Next
 
 ### Fonctionnalités présentes
 
-- Page d'accueil responsive.
-- Interface disponible en français, anglais, espagnol et portugais, avec sélecteur de langue.
-- Présentation de la vision, du périmètre et des principes documentaires.
+- Page d'accueil responsive, identifiée à Nexus Science.
+- Interface disponible en français, anglais, espagnol et portugais, avec préférence de langue mémorisée.
+- Catalogue avec recherche et filtres par discipline, type de publication et période.
+- Route de fiche bibliographique `/catalogue/[id]`, conçue pour séparer œuvre, expression, édition, identifiants et ressources.
+- Espace `/ressources` pour présenter les statuts d'accès et les règles de droits.
 - Endpoint de diagnostic `GET /api/health`.
+- Endpoint de disponibilité du catalogue `GET /api/catalogue`, qui répond explicitement `503 CATALOGUE_NOT_CONNECTED` tant que la base documentaire n'est pas connectée.
 - Configuration TypeScript stricte et scripts `dev`, `build`, `start` et `typecheck`.
 
 ### Limites volontaires de cette fondation
 
+- Les écrans du catalogue et des fiches sont préparés, mais aucune notice réelle n'est encore renvoyée.
 - Le catalogue n'est pas encore connecté à Neon.
+- Aucune donnée bibliographique fictive n'est présentée comme réelle.
 - Aucune migration SQL n'est exécutée par l'application.
 - `/api/health` indique uniquement si `DATABASE_URL` est configurée ; il ne teste pas la connexion à la base.
 - Aucun mécanisme d'authentification n'est activé. L'identité devra être intégrée via Nexus Science après définition et validation du contrat de jeton.

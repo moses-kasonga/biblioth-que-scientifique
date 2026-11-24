@@ -19,16 +19,15 @@ DOAB indique que les métadonnées de son répertoire sont disponibles sous CC0.
 
 Le script actuel lit un fichier JSON exporté. Il ne fait pas lui-même de requête réseau vers DOAB : cela rend le lot inspectable et rejouable avant tout accès en écriture.
 
-Exemple de recherche ciblée (adapter les termes et inspecter la réponse avant import) :
+Recherche ciblée via le collecteur versionné :
 
-\`\`\`bash
-curl --fail --silent --show-error \\
-  -H 'Accept: application/json' \\
-  'https://directory.doabooks.org/rest/search?query=dc.subject.classification%3A%22Mathematics%22&expand=metadata' \\
-  --output doab-batch.json
-\`\`\`
+```bash
+node scripts/fetch-doab-json.mjs \
+  --query 'mathematics AND physics' \
+  --output ./doab-batch.json
+```
 
-Vérifier d'abord que la réponse est bien du JSON et qu'elle contient les records et les champs attendus. Ne pas considérer cette commande d'exemple comme une preuve qu'un filtre donné renvoie un lot déterminé.
+Le collecteur envoie une seule requête REST, demande JSON, contrôle la réponse et vérifie que le format contient des notices reconnues. Il n'importe rien dans Neon. Inspecter ensuite le fichier et lancer le dry-run. La requête et le nombre de résultats dépendent du catalogue DOAB au moment de l'appel.
 
 ### Open Library — enrichissement secondaire
 

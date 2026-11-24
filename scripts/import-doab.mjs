@@ -25,10 +25,10 @@ function parseArgs(argv) {
 
 function help() {
   process.stdout.write(
-    "Import pilote DOAB\\n\\n" +
-    "node scripts/import-doab.mjs --input ./doab-batch.json\\n" +
-    "DATABASE_IMPORT_URL='...' node scripts/import-doab.mjs --input ./doab-batch.json --apply\\n\\n" +
-    "Dry-run par défaut. --apply nécessite le rôle Neon bibliotheque_importer.\\n"
+    "Import pilote DOAB\n\n" +
+    "node scripts/import-doab.mjs --input ./doab-batch.json\n" +
+    "DATABASE_IMPORT_URL='...' node scripts/import-doab.mjs --input ./doab-batch.json --apply\n\n" +
+    "Dry-run par défaut. --apply nécessite le rôle Neon bibliotheque_importer.\n"
   );
 }
 
@@ -60,13 +60,13 @@ async function saveSourceLink(client, sourceRecordId, kind, id, linkType = "desc
   };
   const column = targetColumns[kind];
   if (!column || !id) return;
-  await client.query(
-    `INSERT INTO bibliotheque.source_record_links
-       (source_record_id, \${column}, link_type, match_method, confidence)
-     VALUES ($1, $2, $3, $4, 1.0)
-     ON CONFLICT DO NOTHING`,
-    [sourceRecordId, id, linkType, method]
-  );
+
+  // Column names come only from the fixed whitelist above; all values remain parameterized.
+  const sql =
+    "INSERT INTO bibliotheque.source_record_links " +
+    "(source_record_id, " + column + ", link_type, match_method, confidence) " +
+    "VALUES ($1, $2, $3, $4, 1.0) ON CONFLICT DO NOTHING";
+  await client.query(sql, [sourceRecordId, id, linkType, method]);
 }
 
 async function priorLinks(client, sourceSystemId, externalId, sourceRecordId) {
@@ -373,7 +373,7 @@ async function importOne(pool, sourceSystemId, jobId, record) {
       await client.query("COMMIT").catch(() => {});
     }
     process.stderr.write("Import DOAB échoué pour " + (record.externalRecordId ?? "(sans ID)") + ": " +
-      (error instanceof Error ? error.message : String(error)) + "\\n");
+      (error instanceof Error ? error.message : String(error)) + "\n");
     return "failed";
   } finally {
     client.release();
@@ -410,10 +410,10 @@ async function main() {
       disciplines: record.disciplines,
       issues: record.issues,
     })),
-  }, null, 2) + "\\n");
+  }, null, 2) + "\n");
 
   if (!args.apply) {
-    process.stdout.write("Dry-run terminé : aucune connexion ni écriture Neon.\\n");
+    process.stdout.write("Dry-run terminé : aucune connexion ni écriture Neon.\n");
     return;
   }
   const connectionString = process.env.DATABASE_IMPORT_URL;
@@ -475,7 +475,7 @@ async function main() {
     for (const record of unique) {
       if (!record.externalRecordId) {
         totals.failed += 1;
-        process.stderr.write("Notice ignorée : identifiant externe DOAB manquant.\\n");
+        process.stderr.write("Notice ignorée : identifiant externe DOAB manquant.\n");
         continue;
       }
       const outcome = await importOne(pool, source.rows[0].source_system_id, jobId, record);
@@ -493,7 +493,7 @@ async function main() {
       [jobId, status, unique.length, totals.created,
         totals.skipped + totals.review_required, totals.failed]
     );
-    process.stdout.write(JSON.stringify({ jobId, status, totals }, null, 2) + "\\n");
+    process.stdout.write(JSON.stringify({ jobId, status, totals }, null, 2) + "\n");
   } catch (error) {
     if (jobId) {
       await pool.query(
@@ -508,6 +508,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  process.stderr.write((error instanceof Error ? error.message : String(error)) + "\\n");
+  process.stderr.write((error instanceof Error ? error.message : String(error)) + "\n");
   process.exitCode = 1;
 });

@@ -184,8 +184,20 @@ export function mapDoabRecord(rawRecord) {
   const recordUrl = stableHandle
     ? (stableHandle.startsWith("http") ? stableHandle : "https://hdl.handle.net/" + stableHandle.replace(/^\/+/, ""))
     : (identifierUri.startsWith("http") ? identifierUri : null);
-  const normalizedIsbns = [...new Set(isbnRaw.map(normalizeIsbn).filter(Boolean))];
-  const normalizedDois = [...new Set(doiRaw.map(normalizeDoi).filter(Boolean))];
+  const isbnIdentifiers = isbnRaw
+    .map((sourceValue) => ({ sourceValue, normalizedValue: normalizeIsbn(sourceValue) }))
+    .filter((item) => item.normalizedValue)
+    .filter((item, index, all) =>
+      all.findIndex((candidate) => candidate.normalizedValue === item.normalizedValue) === index
+    );
+  const doiIdentifiers = doiRaw
+    .map((sourceValue) => ({ sourceValue, normalizedValue: normalizeDoi(sourceValue) }))
+    .filter((item) => item.normalizedValue)
+    .filter((item, index, all) =>
+      all.findIndex((candidate) => candidate.normalizedValue === item.normalizedValue) === index
+    );
+  const normalizedIsbns = isbnIdentifiers.map((item) => item.normalizedValue);
+  const normalizedDois = doiIdentifiers.map((item) => item.normalizedValue);
 
   const issues = [];
   if (!externalRecordId) issues.push("missing_external_record_id");
@@ -213,6 +225,8 @@ export function mapDoabRecord(rawRecord) {
     disciplines: mapDiscipline(subjects),
     isbns: normalizedIsbns,
     dois: normalizedDois,
+    isbnIdentifiers,
+    doiIdentifiers,
     rawIdentifiers: [...isbnRaw, ...doiRaw],
     rightsEvidence: [...new Set(rights)],
     issues,

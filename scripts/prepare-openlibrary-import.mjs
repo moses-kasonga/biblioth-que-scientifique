@@ -235,7 +235,7 @@ export async function prepareOpenLibraryImport({ inputDir, outDir, maxEditions =
     for (const [editionId, entry] of editions) {
       const workIds = [...new Set((Array.isArray(entry.record.work_keys) ? entry.record.work_keys : []).filter((id) => ID_PATTERNS.work.test(String(id))))];
       for (const workId of workIds) {
-        const resolved = works.has(workId) && !workConflicts.has(workId);
+        const resolved = !editionConflicts.has(editionId) && works.has(workId) && !workConflicts.has(workId);
         if (!resolved) stats.unresolvedEditionWorkLinks += 1;
         relationshipCount += 1;
         yield {
@@ -248,7 +248,7 @@ export async function prepareOpenLibraryImport({ inputDir, outDir, maxEditions =
     for (const [workId, entry] of works) {
       const authorIds = [...new Set((Array.isArray(entry.record.author_keys) ? entry.record.author_keys : []).filter((id) => ID_PATTERNS.author.test(String(id))))];
       for (const authorId of authorIds) {
-        const resolved = authors.has(authorId) && !authorConflicts.has(authorId);
+        const resolved = !workConflicts.has(workId) && authors.has(authorId) && !authorConflicts.has(authorId);
         if (!resolved) stats.unresolvedWorkAuthorLinks += 1;
         relationshipCount += 1;
         yield {

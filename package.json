@@ -2,18 +2,18 @@
   "name": "bibliotheque-scientifique",
   "version": "0.1.0",
   "private": true,
-  "engines": {
-    "node": ">=22"
-  },
+  "engines": { "node": ">=22" },
   "scripts": {
     "dev": "next dev",
-    "test": "node --check scripts/doab-import-core.mjs && node --check scripts/openalex-import-core.mjs && node --check scripts/hal-import-core.mjs && node --check scripts/openlibrary-import-core.mjs && node --check scripts/fetch-openlibrary.mjs && node --check scripts/run-historical-sampling.mjs && node --check scripts/scan-openlibrary-dump.mjs && node --check scripts/prepare-openlibrary-import.mjs && node --check scripts/verify-openlibrary-package.mjs && node --check scripts/plan-openlibrary-import.mjs && node --check scripts/fetch-openalex.mjs && node --check scripts/fetch-hal.mjs && node --check scripts/doab-json-feed-core.mjs && node --check scripts/import-doab.mjs && node --check scripts/fetch-doab-json.mjs && node --check scripts/fetch-doab-json-feed.mjs && node --test scripts/*.test.mjs",
+    "test": "node --check scripts/doab-import-core.mjs && node --check scripts/openalex-import-core.mjs && node --check scripts/hal-import-core.mjs && node --check scripts/openlibrary-import-core.mjs && node --check scripts/fetch-openlibrary.mjs && node --check scripts/run-historical-sampling.mjs && node --check scripts/scan-openlibrary-dump.mjs && node --check scripts/prepare-openlibrary-import.mjs && node --check scripts/verify-openlibrary-package.mjs && node --check scripts/plan-openlibrary-import.mjs && node --check scripts/verify-openlibrary-import-plan.mjs && node --check scripts/fetch-openalex.mjs && node --check scripts/fetch-hal.mjs && node --check scripts/doab-json-feed-core.mjs && node --check scripts/import-doab.mjs && node --check scripts/fetch-doab-json.mjs && node --check scripts/fetch-doab-json-feed.mjs && node --test scripts/*.test.mjs",
     "prebuild": "npm test",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "prepare:openlibrary": "node scripts/prepare-openlibrary-import.mjs",
-    "verify:openlibrary": "node scripts/verify-openlibrary-package.mjs"
+    "verify:openlibrary": "node scripts/verify-openlibrary-package.mjs",
+    "plan:openlibrary": "node scripts/plan-openlibrary-import.mjs",
+    "verify:openlibrary-plan": "node scripts/verify-openlibrary-import-plan.mjs"
   },
   "dependencies": {
     "next": "16.4.6",

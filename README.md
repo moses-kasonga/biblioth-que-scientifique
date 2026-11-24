@@ -63,13 +63,16 @@ Open Library reste une source secondaire pour des recherches ciblées. Ses dumps
 
 Voir [la procédure d'import](docs/IMPORT_PIPELINE.md).
 
-### Dry-run de l'importateur
+### Récupération ciblée et dry-run
 
-\`\`\`bash
+Récupérer une réponse JSON DOAB puis inspecter le lot :
+
+```bash
+node scripts/fetch-doab-json.mjs --query 'mathematics AND physics' --output ./doab-batch.json
 node scripts/import-doab.mjs --input ./doab-batch.json --max-records 25
-\`\`\`
+```
 
-Le dry-run est le comportement par défaut : il ne se connecte pas à Neon et n'écrit aucune donnée.
+Le collecteur n'envoie qu'une requête ciblée et ne télécharge aucun PDF/EPUB. Le dry-run est le comportement par défaut de l'importateur : il ne se connecte pas à Neon et n'écrit aucune donnée.
 
 L'écriture \`--apply\` exige une variable locale \`DATABASE_IMPORT_URL\` correspondant au rôle \`bibliotheque_importer\` sur la branche de développement uniquement. Ne pas utiliser le secret de lecture Vercel, le rôle propriétaire ou la branche Production.
 

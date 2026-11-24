@@ -155,6 +155,18 @@ HAL distingue les ouvrages (OUV) des chapitres (COUV) et des autres types docume
 
 ## Registre des sources et état de déploiement
 
-La migration db/migrations/011_register_openalex_hal.sql enregistre ces deux sources dans bibliotheque.source_systems. Elle est préparée dans le dépôt mais n'a pas été appliquée à Neon. L'option --apply ne fonctionnera pour OpenAlex ou HAL qu'après revue et application explicite de cette migration sur la branche Neon de développement. La branche de production reste hors périmètre.
+La migration 011_register_openalex_hal.sql a été appliquée à la branche Neon de développement. La migration 012_openlibrary_bulk_policy.sql met à jour la politique d'accès Open Library et sera appliquée séparément à la même branche. Aucune de ces migrations ne crée de notice bibliographique.
 
 Les commandes d'import ci-dessus sont en --dry-run. Elles n'ouvrent aucune connexion Neon. Avant toute écriture, conserver les contrôles de rôle, de droits, d'idempotence, de doublons d'identifiants et le protocole PVI-001. Ne jamais confondre le nombre total de Works OpenAlex, de notices HAL ou de notices de dépôt avec un nombre de livres uniques validés.
+
+## Open Library — Work et Edition séparés
+
+Le connecteur scripts/fetch-openlibrary.mjs interroge Search API en faible volume pour des échantillons de découverte. Il n'est pas destiné à récolter le catalogue en masse. La réponse Search API est généralement au niveau Work et peut agréger des ISBN appartenant à plusieurs Editions. Le normaliseur conserve ces ISBN comme candidats d'édition et les marque pour résolution ; il ne les rattache pas arbitrairement à une édition.
+
+Un résultat explicitement identifié par un suffixe Edition (M), avec une seule edition_key identique, est traité comme une Edition identifiée ; les ISBN peuvent alors lui être rattachés. Les Works (W) ne sont pas convertis en Editions sans résolution.
+
+Pour un chargement massif, Open Library recommande ses dumps mensuels officiels plutôt que l'API Search : le dump Editions est volumineux (environ 9,2 Go compressé) et le dump Works environ 2,9 Go. Le pipeline devra les traiter en flux et préserver les relations Works/Éditions ; ne jamais utiliser Search API comme backend de collecte massive.
+
+## Campagne de couverture historique
+
+scripts/run-historical-sampling.mjs échantillonne quatre périodes — 1720–1899, 1900–1949, 1950–1999 et 2000–2026 — sur OpenAlex, HAL et Open Library. Il collecte 12 lots de 25 notices, exécute le normaliseur commun en --dry-run et produit un rapport comparatif JSON. Aucun lot n'est envoyé à Neon.

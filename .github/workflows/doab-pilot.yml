@@ -10,6 +10,10 @@ on:
       - scripts/doab-json-feed-core.mjs
       - scripts/doab-import-core.mjs
       - scripts/import-doab.mjs
+      - scripts/doab-import-core.test.mjs
+      - scripts/doab-json-feed-core.test.mjs
+      - package.json
+      - docs/IMPORT_PIPELINE.md
   workflow_dispatch:
     inputs:
       limit:

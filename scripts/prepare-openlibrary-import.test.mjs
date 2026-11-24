@@ -67,6 +67,10 @@ test("marks conflicting revisions of a source key for review rather than choosin
     assert.equal(editions.length, 1);
     assert.equal(editions[0].review_required, true);
     assert.ok(editions[0].review_reasons.includes("duplicate_source_record_id_conflicting_payloads"));
+    const relationships = (await readFile(outputPaths.relationships, "utf8")).trim().split("\\n").map(JSON.parse);
+    assert.equal(relationships[0].resolved, false);
+    assert.equal(relationships[0].review_required, true);
+    assert.equal(manifest.quality.unresolvedEditionWorkLinks, 1);
     assert.equal(manifest.quality.editionsInput.conflictingIds, 1);
   } finally {
     await rm(dir, { recursive: true, force: true });

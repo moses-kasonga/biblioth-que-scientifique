@@ -6,29 +6,6 @@
 
 BEGIN;
 
-CREATE TABLE bibliotheque.bibliographic_identifiers (
-  bibliographic_identifier_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  scheme_code TEXT NOT NULL REFERENCES bibliotheque.identifier_schemes(scheme_code) ON DELETE RESTRICT,
-  identifier_value TEXT NOT NULL,
-  normalized_value TEXT NOT NULL,
-  work_id UUID REFERENCES bibliotheque.works(work_id) ON DELETE RESTRICT,
-  expression_id UUID REFERENCES bibliotheque.work_expressions(expression_id) ON DELETE RESTRICT,
-  edition_id UUID REFERENCES bibliotheque.editions(edition_id) ON DELETE RESTRICT,
-  digital_asset_id UUID REFERENCES bibliotheque.digital_assets(digital_asset_id) ON DELETE RESTRICT,
-  is_preferred BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  CONSTRAINT bibliographic_identifiers_one_target_check
-    CHECK (num_nonnulls(work_id, expression_id, edition_id, digital_asset_id) = 1),
-  CONSTRAINT bibliographic_identifiers_value_check
-    CHECK (length(btrim(identifier_value)) > 0 AND length(btrim(normalized_value)) > 0),
-  CONSTRAINT bibliographic_identifiers_scheme_value_unique UNIQUE (scheme_code, normalized_value)
-);
-
-CREATE INDEX bibliographic_identifiers_work_idx ON bibliotheque.bibliographic_identifiers(work_id) WHERE work_id IS NOT NULL;
-CREATE INDEX bibliographic_identifiers_expression_idx ON bibliotheque.bibliographic_identifiers(expression_id) WHERE expression_id IS NOT NULL;
-CREATE INDEX bibliographic_identifiers_edition_idx ON bibliotheque.bibliographic_identifiers(edition_id) WHERE edition_id IS NOT NULL;
-CREATE INDEX bibliographic_identifiers_asset_idx ON bibliotheque.bibliographic_identifiers(digital_asset_id) WHERE digital_asset_id IS NOT NULL;
-
 CREATE TABLE bibliotheque.digital_assets (
   digital_asset_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   edition_id UUID NOT NULL REFERENCES bibliotheque.editions(edition_id) ON DELETE RESTRICT,
@@ -60,6 +37,29 @@ CREATE TABLE bibliotheque.digital_assets (
 
 CREATE INDEX digital_assets_edition_status_idx
   ON bibliotheque.digital_assets(edition_id, access_status);
+
+CREATE TABLE bibliotheque.bibliographic_identifiers (
+  bibliographic_identifier_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  scheme_code TEXT NOT NULL REFERENCES bibliotheque.identifier_schemes(scheme_code) ON DELETE RESTRICT,
+  identifier_value TEXT NOT NULL,
+  normalized_value TEXT NOT NULL,
+  work_id UUID REFERENCES bibliotheque.works(work_id) ON DELETE RESTRICT,
+  expression_id UUID REFERENCES bibliotheque.work_expressions(expression_id) ON DELETE RESTRICT,
+  edition_id UUID REFERENCES bibliotheque.editions(edition_id) ON DELETE RESTRICT,
+  digital_asset_id UUID REFERENCES bibliotheque.digital_assets(digital_asset_id) ON DELETE RESTRICT,
+  is_preferred BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT bibliographic_identifiers_one_target_check
+    CHECK (num_nonnulls(work_id, expression_id, edition_id, digital_asset_id) = 1),
+  CONSTRAINT bibliographic_identifiers_value_check
+    CHECK (length(btrim(identifier_value)) > 0 AND length(btrim(normalized_value)) > 0),
+  CONSTRAINT bibliographic_identifiers_scheme_value_unique UNIQUE (scheme_code, normalized_value)
+);
+
+CREATE INDEX bibliographic_identifiers_work_idx ON bibliotheque.bibliographic_identifiers(work_id) WHERE work_id IS NOT NULL;
+CREATE INDEX bibliographic_identifiers_expression_idx ON bibliotheque.bibliographic_identifiers(expression_id) WHERE expression_id IS NOT NULL;
+CREATE INDEX bibliographic_identifiers_edition_idx ON bibliotheque.bibliographic_identifiers(edition_id) WHERE edition_id IS NOT NULL;
+CREATE INDEX bibliographic_identifiers_asset_idx ON bibliotheque.bibliographic_identifiers(digital_asset_id) WHERE digital_asset_id IS NOT NULL;
 
 CREATE TABLE bibliotheque.rights_statements (
   rights_statement_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

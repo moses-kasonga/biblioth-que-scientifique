@@ -10,3 +10,8 @@ coverage/
 .env.*
 !.env.example
 .vercel/
+openlibrary-import-dump/
+openlibrary-dump-scan/
+openlibrary-import-package/
+openlibrary-import-plan/
+openlibrary-import-checkpoint.json

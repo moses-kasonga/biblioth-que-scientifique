@@ -20,11 +20,11 @@ DOAB indique que les métadonnées de son répertoire sont disponibles sous CC0.
 Collecte du lot pilote depuis le flux JSON officiel :
 
 ```bash
-node scripts/fetch-doab-json-feed.mjs --limit 25 --output ./doab-batch.json
+node scripts/fetch-doab-json-feed.mjs --limit 25 --offset 0 --output ./doab-batch.json
 node scripts/import-doab.mjs --input ./doab-batch.json --max-records 25 --dry-run
 ```
 
-Le collecteur lit le JSON en continu et s'arrête dès qu'il a sélectionné le nombre de notices demandé ; il ne télécharge pas le flux entier sur disque. Par défaut, il privilégie le français, l'anglais, l'espagnol et le portugais, tout en conservant les notices dont la langue est absente pour revue. Les notices dans d'autres langues sont ignorées, sauf avec `--all-languages`. Le maximum est de 500 notices par lot. Aucun `bitstream`, PDF ou EPUB n'est demandé ou téléchargé. La sortie locale est un petit fichier JSON rejouable. Le dry-run ne se connecte pas à Neon.
+Le collecteur lit le JSON en continu et s'arrête dès qu'il a sélectionné le nombre de notices demandé ; il ne télécharge pas le flux entier sur disque. Le paramètre `--offset` permet de sauter des notices admissibles déjà parcourues et de préparer des lots suivants (par exemple `--offset 1000`). L'offset s'applique après le filtre de langues et doit être conservé dans le journal d'import ; le flux public pouvant évoluer, l'identifiant externe de chaque notice reste la clé de reprise et d'idempotence. Par défaut, il privilégie le français, l'anglais, l'espagnol et le portugais, tout en conservant les notices dont la langue est absente pour revue. Les notices dans d'autres langues sont ignorées, sauf avec `--all-languages`. Le maximum est de 500 notices par lot. Aucun `bitstream`, PDF ou EPUB n'est demandé ou téléchargé. La sortie locale est un petit fichier JSON rejouable. Le dry-run ne se connecte pas à Neon.
 
 Le collecteur REST `fetch-doab-json.mjs` reste disponible pour les recherches ciblées lorsque l'API REST est accessible ; il demande explicitement `expand=metadata`. Pour le pilote automatisé, le flux JSON officiel est le parcours de référence.
 

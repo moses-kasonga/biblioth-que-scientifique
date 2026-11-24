@@ -11,14 +11,15 @@ DOAB indique que les métadonnées de son répertoire sont disponibles sous CC0.
 ### DOAB — source pilote
 
 - Métadonnées et identifiants : source principale du pilote.
-- Pour une sélection ponctuelle : DOAB Selective Export, conçu pour des ensembles allant jusqu'à 500 titres.
-- Pour les ensembles plus importants : flux de métadonnées réguliers (par exemple MARCXML / KBART) ou procédure d'export adaptée.
-- API REST : découverte et extraction ciblée de métadonnées.
+- Pour une sélection ponctuelle : DOAB Selective Export, optimisé pour des ensembles jusqu'à 500 titres (CSV actuellement pris en charge par ce parcours).
+- Pour des ensembles plus importants : flux complets MARCXML, KBART, ONIX, JSON ou moissonnage OAI-PMH.
+- API REST : recherche ciblée et récupération de métadonnées en JSON ou XML.
+- **Limite du script pilote actuel :** il lit les réponses JSON de l'API REST. Les exports CSV/KBART/MARCXML/ONIX et les enregistrements OAI-PMH exigent un convertisseur dédié et des tests de mapping ; ne pas les passer directement au script.
 - Conserver l'identifiant externe, la version du record lorsqu'elle existe, l'horodatage de collecte, le JSON brut et son SHA-256.
 
 Le script actuel lit un fichier JSON exporté. Il ne fait pas lui-même de requête réseau vers DOAB : cela rend le lot inspectable et rejouable avant tout accès en écriture.
 
-Exemple de récupération à adapter à la requête réellement choisie dans l'interface ou la documentation DOAB :
+Exemple de recherche ciblée (adapter les termes et inspecter la réponse avant import) :
 
 \`\`\`bash
 curl --fail --silent --show-error \\

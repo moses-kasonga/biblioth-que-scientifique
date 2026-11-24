@@ -176,10 +176,10 @@ Rapport de campagne historique (300 notices, 4 périodes, 3 sources) : docs/pilo
 
 ## Open Library — scanner streaming des dumps mensuels
 
-scripts/scan-openlibrary-dump.mjs lit les fichiers `.txt.gz` directement en flux, sans décompression complète sur disque ni chargement en mémoire. Il filtre les Editions scientifiques par année et sujets, écrit les Editions dans un JSONL et extrait séparément les Works référencés depuis le dump Works. Chaque JSONL garde le payload brut, la révision et l'identifiant source. Le scanner ne se connecte pas à Neon et ne crée pas d'ouvrage canonique.
+scripts/scan-openlibrary-dump.mjs lit les fichiers `.txt.gz` directement en flux, sans décompression complète sur disque ni chargement en mémoire. Il filtre les Editions scientifiques par année et sujets, écrit les Editions dans un JSONL, extrait les Works référencés depuis le dump Works, puis résout leurs auteurs dans le dump Authors. Chaque JSONL garde le payload brut, la révision et l'identifiant source. Le scanner ne se connecte pas à Neon et ne crée pas d'ouvrage canonique.
 
 Exemple après téléchargement des dumps officiels sur un stockage/runner disposant de l'espace nécessaire :
 
-node scripts/scan-openlibrary-dump.mjs --editions ./ol_dump_editions_latest.txt.gz --works ./ol_dump_works_latest.txt.gz --from-year 1720 --to-year 2026 --max-editions 100000 --out-dir ./openlibrary-dump-sample
+node scripts/scan-openlibrary-dump.mjs --editions ./ol_dump_editions_latest.txt.gz --works ./ol_dump_works_latest.txt.gz --authors ./ol_dump_authors_latest.txt.gz --from-year 1720 --to-year 2026 --max-editions 100000 --out-dir ./openlibrary-dump-sample
 
 Le scanner prépare les lots Work/Edition séparés. L'importateur transactionnel en base devra ensuite créer ou retrouver les Works, lier plusieurs Editions à un même Work, contrôler les doublons et traiter les anomalies avant toute insertion catalogue.

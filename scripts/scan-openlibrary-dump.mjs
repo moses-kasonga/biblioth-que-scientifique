@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createReadStream, createWriteStream } from "node:fs";
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { createGunzip } from "node:zlib";
 import { createInterface } from "node:readline";
 import { once } from "node:events";
@@ -14,6 +14,7 @@ function parseArgs(argv) {
   const args = {
     editions: "",
     works: "",
+    authors: "",
     fromYear: 1720,
     toYear: 2026,
     maxEditions: 100000,
@@ -25,6 +26,7 @@ function parseArgs(argv) {
     const arg = argv[i];
     if (arg === "--editions") args.editions = argv[++i] ?? "";
     else if (arg === "--works") args.works = argv[++i] ?? "";
+    else if (arg === "--authors") args.authors = argv[++i] ?? "";
     else if (arg === "--from-year") args.fromYear = Number(argv[++i]);
     else if (arg === "--to-year") args.toYear = Number(argv[++i]);
     else if (arg === "--max-editions") args.maxEditions = Number(argv[++i]);
@@ -36,6 +38,7 @@ function parseArgs(argv) {
   if (args.help) return args;
   if (!args.editions) throw new Error("--editions est obligatoire et doit pointer vers le dump officiel Editions.");
   if (!args.works) throw new Error("--works est obligatoire pour résoudre les relations Work/Edition.");
+  if (!args.authors) throw new Error("--authors est obligatoire pour résoudre les auteurs des Works.");
   if (!Number.isInteger(args.fromYear) || !Number.isInteger(args.toYear) ||
       args.fromYear < 1 || args.toYear > 2026 || args.fromYear > args.toYear) {
     throw new Error("Plage d'années invalide : elle doit être comprise entre 1 et 2026.");
@@ -70,6 +73,13 @@ function splitDumpLine(line) {
 function keyId(key, suffix) {
   const value = String(key ?? "").match(new RegExp("(OL[0-9]+" + suffix + ")$", "i"));
   return value ? value[1].toUpperCase() : null;
+}
+
+function authorKeysFromWork(raw) {
+  const entries = Array.isArray(raw?.authors) ? raw.authors : [];
+  return [...new Set(entries.map((item) =>
+    keyId(item?.author?.key ?? item?.key ?? item, "A")
+  ).filter(Boolean))];
 }
 
 function isScientific(record) {
@@ -129,6 +139,7 @@ function normalizeWork(row, raw) {
     title: String(raw.title ?? "").trim(),
     first_publish_year: parsePublicationYear(raw.first_publish_date),
     authors: Array.isArray(raw.authors) ? raw.authors : [],
+    author_keys: authorKeysFromWork(raw),
     subjects: Array.isArray(raw.subjects) ? raw.subjects.map(String) : [],
     raw_payload: raw,
   };
@@ -146,13 +157,16 @@ async function writeJsonLine(stream, record) {
 }
 
 export async function scanOpenLibraryDumps(options) {
-  const { editions, works, fromYear, toYear, maxEditions, skipMatching, outDir } = options;
+  const { editions, works, authors, fromYear, toYear, maxEditions, skipMatching, outDir } = options;
   await mkdir(outDir, { recursive: true });
   const editionsPath = resolve(outDir, "openlibrary-editions.jsonl");
   const worksPath = resolve(outDir, "openlibrary-works.jsonl");
+  const authorsPath = resolve(outDir, "openlibrary-authors.jsonl");
   const editionStream = createWriteStream(editionsPath, { flags: "w" });
   const workStream = createWriteStream(worksPath, { flags: "w" });
+  const authorStream = createWriteStream(authorsPath, { flags: "w" });
   const selectedWorkIds = new Set();
+  const selectedAuthorIds = new Set();
   const editionStats = {
     scanned: 0,
     selected: 0,
@@ -219,6 +233,7 @@ export async function scanOpenLibraryDumps(options) {
         catch { workStats.malformed += 1; continue; }
         const normalized = normalizeWork(row, raw);
         if (!normalized.title) workStats.missingTitle += 1;
+        for (const authorId of normalized.author_keys) selectedAuthorIds.add(authorId);
         await writeJsonLine(workStream, normalized);
         selectedWorkIds.delete(id);
         workStats.selected += 1;
@@ -230,6 +245,43 @@ export async function scanOpenLibraryDumps(options) {
     await once(workStream, "finish");
   }
 
+  const authorStats = { scanned: 0, selected: 0, malformed: 0, missingName: 0 };
+  try {
+    if (selectedAuthorIds.size) {
+      for await (const line of iterateDump(authors)) {
+        const row = splitDumpLine(line);
+        if (!row || row.type !== "/type/author") continue;
+        const id = keyId(row.key, "A");
+        if (!id || !selectedAuthorIds.has(id)) continue;
+        authorStats.scanned += 1;
+        let raw;
+        try { raw = JSON.parse(row.json); }
+        catch { authorStats.malformed += 1; continue; }
+        const authorRecord = {
+          source_code: "openlibrary",
+          record_type: "author",
+          external_record_id: id,
+          source_record_version: row.revision || row.lastModified || "unknown",
+          preferred_name: String(raw.name ?? "").trim(),
+          alternate_names: Array.isArray(raw.alternate_names) ? raw.alternate_names.map(String) : [],
+          birth_date: String(raw.birth_date ?? "").trim() || null,
+          death_date: String(raw.death_date ?? "").trim() || null,
+          entity_type: String(raw.entity_type ?? "").trim() || null,
+          remote_ids: raw.remote_ids && typeof raw.remote_ids === "object" ? raw.remote_ids : {},
+          raw_payload: raw,
+        };
+        if (!authorRecord.preferred_name) authorStats.missingName += 1;
+        await writeJsonLine(authorStream, authorRecord);
+        selectedAuthorIds.delete(id);
+        authorStats.selected += 1;
+        if (!selectedAuthorIds.size) break;
+      }
+    }
+  } finally {
+    authorStream.end();
+    await once(authorStream, "finish");
+  }
+
   const report = {
     generatedAt: new Date().toISOString(),
     mode: "streaming extraction only; no Neon connection or write",
@@ -237,6 +289,7 @@ export async function scanOpenLibraryDumps(options) {
     input: {
       editions: isAbsolute(editions) ? editions : resolve(editions),
       works: isAbsolute(works) ? works : resolve(works),
+      authors: isAbsolute(authors) ? authors : resolve(authors),
     },
     selection: {
       fromYear,
@@ -251,13 +304,16 @@ export async function scanOpenLibraryDumps(options) {
       referencedBySelectedEditions: workStats.selected + selectedWorkIds.size,
       unresolvedWorkKeys: selectedWorkIds.size,
     },
-    output: { editionsPath, worksPath },
-    note: "JSONL keeps Work and Edition records separate and preserves each original payload. No catalogue entities are created.",
+    linkedAuthors: {
+      ...authorStats,
+      referencedBySelectedWorks: authorStats.selected + selectedAuthorIds.size,
+      unresolvedAuthorKeys: selectedAuthorIds.size,
+    },
+    output: { editionsPath, worksPath, authorsPath },
+    note: "JSONL keeps Edition, Work and Author records separate and preserves each original payload. No catalogue entities are created.",
   };
   const reportPath = resolve(outDir, "openlibrary-dump-scan-report.json");
-  await import("node:fs/promises").then(({ writeFile }) =>
-    writeFile(reportPath, JSON.stringify(report, null, 2) + "\n", "utf8")
-  );
+  await writeFile(reportPath, JSON.stringify(report, null, 2) + "\n", "utf8");
   return report;
 }
 
@@ -266,8 +322,8 @@ async function main() {
   if (args.help) {
     process.stdout.write(
       "Streaming Open Library data dump scanner\\n\\n" +
-      "node scripts/scan-openlibrary-dump.mjs --editions ol_dump_editions_latest.txt.gz --works ol_dump_works_latest.txt.gz --from-year 1720 --to-year 2026 --max-editions 100000\\n\\n" +
-      "No database connection. Emits separate Work and Edition JSONL batches.\\n"
+      "node scripts/scan-openlibrary-dump.mjs --editions ol_dump_editions_latest.txt.gz --works ol_dump_works_latest.txt.gz --authors ol_dump_authors_latest.txt.gz --from-year 1720 --to-year 2026 --max-editions 100000\\n\\n" +
+      "No database connection. Emits separate Edition, Work and Author JSONL batches.\\n"
     );
     return;
   }
@@ -277,6 +333,8 @@ async function main() {
     selectedEditions: report.editions.selected,
     linkedWorks: report.linkedWorks.selected,
     unresolvedWorkKeys: report.linkedWorks.unresolvedWorkKeys,
+    linkedAuthors: report.linkedAuthors.selected,
+    unresolvedAuthorKeys: report.linkedAuthors.unresolvedAuthorKeys,
     mode: report.mode,
   }, null, 2) + "\n");
 }

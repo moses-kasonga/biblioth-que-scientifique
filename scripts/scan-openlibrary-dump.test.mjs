@@ -15,6 +15,7 @@ test("streams edition and work dumps into separate JSONL files", async () => {
   try {
     const editionsPath = join(dir, "editions.txt.gz");
     const worksPath = join(dir, "works.txt.gz");
+    const authorsPath = join(dir, "authors.txt.gz");
     const scientificEdition = row("/type/edition", "/books/OL100M", 7, "2026-11-01T00:00:00.000000", {
       title: "A book about physics",
       publish_date: "1901",
@@ -57,10 +58,21 @@ test("streams edition and work dumps into separate JSONL files", async () => {
       subjects: ["Poetry"],
     });
     await writeFile(worksPath, gzipSync([work10, work12, unrelatedWork].join("\n") + "\n"));
+    const author1 = row("/type/author", "/authors/OL1A", 5, "2026-11-04T00:00:00.000000", {
+      name: "Ada Author",
+      alternate_names: ["A. Author"],
+      birth_date: "1970",
+      remote_ids: { viaf: "12345" },
+    });
+    const unrelatedAuthor = row("/type/author", "/authors/OL99A", 1, "2026-11-04T00:00:00.000000", {
+      name: "Unrelated Person",
+    });
+    await writeFile(authorsPath, gzipSync([author1, unrelatedAuthor].join("\n") + "\n"));
 
     const report = await scanOpenLibraryDumps({
       editions: editionsPath,
       works: worksPath,
+      authors: authorsPath,
       fromYear: 1720,
       toYear: 2026,
       maxEditions: 100,
@@ -74,13 +86,20 @@ test("streams edition and work dumps into separate JSONL files", async () => {
     assert.equal(report.editions.validIsbnValues, 3);
     assert.equal(report.linkedWorks.selected, 2);
     assert.equal(report.linkedWorks.unresolvedWorkKeys, 0);
+    assert.equal(report.linkedAuthors.selected, 1);
+    assert.equal(report.linkedAuthors.unresolvedAuthorKeys, 0);
 
     const editions = (await readFile(report.output.editionsPath, "utf8")).trim().split("\n").map(JSON.parse);
     const works = (await readFile(report.output.worksPath, "utf8")).trim().split("\n").map(JSON.parse);
+    const authors = (await readFile(report.output.authorsPath, "utf8")).trim().split("\n").map(JSON.parse);
     assert.deepEqual(editions.map((record) => record.external_record_id), ["OL100M", "OL102M"]);
     assert.deepEqual(editions[0].work_keys, ["OL10W"]);
     assert.deepEqual(editions[0].isbn_identifiers.map((item) => item.normalizedValue), ["0306406152", "9780306406157"]);
     assert.deepEqual(works.map((record) => record.external_record_id), ["OL10W", "OL12W"]);
+    assert.deepEqual(works[0].author_keys, ["OL1A"]);
+    assert.deepEqual(authors.map((record) => record.external_record_id), ["OL1A"]);
+    assert.equal(authors[0].preferred_name, "Ada Author");
+    assert.deepEqual(authors[0].alternate_names, ["A. Author"]);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

@@ -51,6 +51,7 @@ function requestFollowingRedirects(url, headers = {}, redirects = 0) {
         requestFollowingRedirects(next, headers, redirects + 1).then(resolvePromise, reject);
         return;
       }
+      Object.defineProperty(res, "_resolvedUrl", { value: parsed.toString() });
       resolvePromise(res);
     });
     req.setTimeout(120000, () => req.destroy(new Error("Délai de connexion dépassé.")));
@@ -132,7 +133,7 @@ async function downloadOne(kind, url, outDir, fresh) {
     throw new Error("Téléchargement incomplet pour " + filename + " : " + current.size + "/" + totalBytes + " octets. Relancez pour reprendre.");
   }
   await rename(partialPath, finalPath);
-  return { kind, file: filename, bytes: current.size, sha256: await sha256File(finalPath), reused_existing_file: false };
+  return { kind, file: filename, bytes: current.size, sha256: await sha256File(finalPath), resolved_url: response._resolvedUrl, reused_existing_file: false };
 }
 
 export function validateDownloadSelection(only) {

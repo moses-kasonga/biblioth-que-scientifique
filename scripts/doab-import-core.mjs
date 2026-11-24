@@ -25,6 +25,7 @@ function unwrapRecord(record) {
 function collectRecords(payload) {
   if (Array.isArray(payload)) return payload;
   const candidates = [
+    payload?.publications,
     payload?.results,
     payload?.items,
     payload?.objects,
@@ -159,27 +160,30 @@ export function mapDoabRecord(rawRecord) {
   const recordHandle = asString(record?.handle ?? record?.handleUrl);
   const metadataHandle = firstValue(metadata, ["handle"]);
   const uuid = asString(record?.uuid ?? record?.id);
-  const identifierUri = firstValue(metadata, ["dc.identifier.uri"]);
-  const stableHandle = recordHandle || metadataHandle;
+  const identifierUri = firstValue(metadata, ["dc.identifier.uri", "identifier.uri", "identifier"]);
+  const handleMatch = identifierUri.match(/\\/handle\\/([^?#]+)/i);
+  const handleFromIdentifier = handleMatch ? decodeURIComponent(handleMatch[1]) : "";
+  const stableHandle = recordHandle || metadataHandle || handleFromIdentifier;
   const externalRecordId = stableHandle || uuid || identifierUri;
-  const authors = valuesFor(metadata, ["dc.contributor.author", "dc.creator", "creator"]);
-  const editors = valuesFor(metadata, ["dc.contributor.editor"]);
+  const authors = valuesFor(metadata, ["dc.contributor.author", "dc.creator", "creator", "author"]);
+  const editors = valuesFor(metadata, ["dc.contributor.editor", "editor"]);
   const publishers = valuesFor(metadata, ["dc.publisher", "publisher"]);
   const languageValues = valuesFor(metadata, ["dc.language.iso", "dc.language", "language"]);
   const language = normalizeLanguage(languageValues[0]);
-  const publicationDate = firstValue(metadata, ["dc.date.issued", "dateIssued", "publicationDate"]);
+  const publicationDate = firstValue(metadata, ["dc.date.issued", "dateIssued", "publicationDate", "published"]);
   const subjects = [
     ...valuesFor(metadata, ["dc.subject", "subject"]),
-    ...valuesFor(metadata, ["dc.subject.classification"]),
+    ...valuesFor(metadata, ["dc.subject.classification", "classification"]),
   ].filter(Boolean);
-  const isbnRaw = valuesFor(metadata, ["dc.identifier.isbn", "identifier.isbn"]);
-  const doiRaw = valuesFor(metadata, ["dc.identifier.doi", "identifier.doi"]);
+  const isbnRaw = valuesFor(metadata, ["dc.identifier.isbn", "identifier.isbn", "isbn"]);
+  const doiRaw = valuesFor(metadata, ["dc.identifier.doi", "identifier.doi", "doi"]);
   const rights = [
     ...valuesFor(metadata, ["dc.rights.uri", "dc.rights.license"]),
-    ...valuesFor(metadata, ["dc.rights", "rights"]),
+    ...valuesFor(metadata, ["dc.rights", "rights", "licence", "license"]),
   ];
   const recordVersion = asString(record?.lastModified ?? record?.last_modified ?? record?.updatedAt)
     || asString(record?.version)
+    || firstValue(metadata, ["modified"])
     || null;
   const recordUrl = stableHandle
     ? (stableHandle.startsWith("http") ? stableHandle : "https://hdl.handle.net/" + stableHandle.replace(/^\/+/, ""))

@@ -4,86 +4,108 @@ Module de bibliothèque scientifique numérique de l’écosystème Nexus Scienc
 
 ## Vision
 
-Construire un catalogue scientifique international couvrant les publications de 1720 à 2026, avec une architecture multilingue dès la première version. La cible initiale est de 100 000 notices bibliographiques, avec une architecture conçue pour dépasser 1 000 000 de notices et continuer à croître.
+Construire un catalogue scientifique international couvrant les publications de 1720 à 2026 et au-delà, avec une architecture multilingue dès la première version. L'objectif initial est de constituer 100 000 notices bibliographiques, avec une architecture conçue pour dépasser 1 000 000 de notices et continuer à croître.
 
 Langues initiales : français, anglais, espagnol et portugais. Le modèle doit permettre l'ajout d'autres langues.
 
-## Architecture cible
+## Architecture
 
-- **GitHub** : code source, documentation et migrations versionnées.
-- **Neon PostgreSQL** : base de données du projet Bibliothèque scientifique.
+- **GitHub** : code source, documentation, migrations et pipeline d'import versionnés.
+- **Neon PostgreSQL** : base documentaire de ce module, avec une branche de développement isolée.
 - **Vercel** : hébergement de l'application et de son API.
-- **Nexus Science** : système central d'identité des utilisateurs lors de l'intégration, après validation du contrat d'identité.
+- **Nexus Science** : futur système central d'identité des utilisateurs, après validation du contrat d'identité. Aucun compte local n'est créé dans ce module.
 
-## Principes de sécurité
+## État technique vérifié — 24 novembre 2026
+
+### Base Neon de développement
+
+- Projet : \`bibliotheque-scientifique\`.
+- Branche de travail : \`schema-development-2026-11-24\`.
+- Schéma : \`bibliotheque\`.
+- Migrations 001 à 010 appliquées et inscrites dans \`bibliotheque.schema_migrations\`.
+- Structure vérifiée : 44 tables, 117 index et 456 contraintes.
+- Référentiels initiaux : 4 langues, 7 types de publication et 10 disciplines, avec libellés FR/EN/ES/PT.
+- Les tests temporaires ont confirmé le blocage des cycles dans les compositions d'œuvres, la hiérarchie des sujets et les tables des matières.
+- La branche Neon \`production\` n'a pas été modifiée.
+
+### Rôles et privilèges
+
+- \`bibliotheque_reader\` : rôle de lecture utilisé par l'API Vercel Preview ; pas de droit d'insertion et pas de \`BYPASSRLS\`.
+- \`bibliotheque_importer\` : rôle d'import restreint à des tables de catalogue et de provenance ; pas de superutilisateur, pas de \`BYPASSRLS\`, pas d'accès aux coffres personnels, pas d'écriture des droits ou des ressources numériques.
+- Le rôle propriétaire \`neondb_owner\` est réservé à l'administration et aux migrations. Il n'est jamais utilisé par l'application.
+- Les identifiants de connexion ne doivent jamais être versionnés.
+
+### Application Vercel
+
+- Branche GitHub de l'application : \`app/minimal-vercel-foundation\`.
+- Framework : Next.js.
+- \`GET /api/catalogue\` interroge réellement Neon avec le rôle en lecture seule.
+- \`DATABASE_URL\` est un secret Vercel Preview limité à cette branche.
+- Aucune variable de connexion Neon n'est définie pour Production.
+- Les résultats restent vides tant que des notices bibliographiques réelles n'ont pas été importées.
+- La mise en Production et la fusion vers \`main\` restent des décisions séparées, non exécutées.
+
+## Pipeline documentaire
+
+Le premier connecteur de métadonnées est DOAB. Les métadonnées du répertoire sont publiées sous CC0 ; cette licence ne doit pas être confondue avec les droits applicables au PDF/EPUB d'un livre.
+
+Le pipeline :
+
+- lit un fichier JSON exporté de DOAB ;
+- conserve le record source et son empreinte SHA-256 ;
+- normalise langues, dates, ISBN et DOI ;
+- propose des disciplines contrôlées ;
+- détecte les correspondances par identifiants sans fusion automatique ;
+- crée des notices au statut \`provisional\` et enregistre leur provenance ;
+- ne télécharge aucun fichier et ne crée aucun droit implicite.
+
+Open Library reste une source secondaire pour des recherches ciblées. Ses dumps mensuels, et non son API Web, sont à privilégier pour les volumes importants.
+
+Voir [la procédure d'import](docs/IMPORT_PIPELINE.md).
+
+### Dry-run de l'importateur
+
+\`\`\`bash
+node scripts/import-doab.mjs --input ./doab-batch.json --max-records 25
+\`\`\`
+
+Le dry-run est le comportement par défaut : il ne se connecte pas à Neon et n'écrit aucune donnée.
+
+L'écriture \`--apply\` exige une variable locale \`DATABASE_IMPORT_URL\` correspondant au rôle \`bibliotheque_importer\` sur la branche de développement uniquement. Ne pas utiliser le secret de lecture Vercel, le rôle propriétaire ou la branche Production.
+
+## Principes de sécurité et de qualité
 
 - Ne jamais commiter de secrets, mots de passe ou URL de connexion contenant des identifiants.
-- Ne pas exécuter de migration de conception directement sur Neon `production`.
+- Ne jamais exécuter de migration de conception directement sur Neon \`production\`.
 - Versionner les changements de schéma et les tester sur une branche Neon isolée.
-- Ne pas créer de système d'authentification indépendant pour la bibliothèque.
-- Vérifier les droits d'accès aux ressources numériques indépendamment de leur disponibilité technique.
-
-## Capacité du catalogue
-
-- Objectif initial : 100 000 notices bibliographiques.
-- Capacité de conception : 1 000 000 de notices et davantage, sans plafond artificiel.
-- Les notices, œuvres, expressions, éditions et ressources numériques sont comptées séparément. Une notice ne garantit pas l'accès à un fichier intégral.
-
-## État du projet
-
-- Audit de cohérence SQL-ready v0.3 documenté.
-- Branche GitHub de préparation : `docs/initial-foundation`.
-- Migrations SQL 001 à 008 rédigées dans `db/migrations/`.
-- Branche Neon isolée de développement créée depuis `production`.
-- **Aucune migration SQL n'a encore été exécutée**, y compris sur la branche de développement.
-- La recherche avancée (migration 009) reste différée jusqu'à validation des parcours et du classement.
-
-## Prochaines étapes
-
-1. Revue statique et validation syntaxique des migrations 001 à 008.
-2. Préparer l'environnement de test et les rôles SQL séparés.
-3. Exécuter les migrations sur la branche Neon de développement uniquement.
-4. Exécuter les tests d'intégrité, de droits, de cycles et d'isolation RLS.
-5. Corriger et documenter les résultats avant toute demande d'approbation de production.
-6. Configurer un projet Vercel distinct de celui de Nexus Science.
-
-
-## Application web — fondation Vercel
-
-La branche `app/minimal-vercel-foundation` ajoute une première application Next.js (App Router) destinée à être déployée séparément sur Vercel.
-
-### Fonctionnalités présentes
-
-- Page d'accueil responsive, identifiée à Nexus Science.
-- Interface disponible en français, anglais, espagnol et portugais, avec préférence de langue mémorisée.
-- Catalogue avec recherche et filtres par discipline, type de publication et période.
-- Route de fiche bibliographique `/catalogue/[id]`, conçue pour séparer œuvre, expression, édition, identifiants et ressources.
-- Espace `/ressources` pour présenter les statuts d'accès et les règles de droits.
-- Endpoint de diagnostic `GET /api/health`.
-- Endpoint de disponibilité du catalogue `GET /api/catalogue`, qui répond explicitement `503 CATALOGUE_NOT_CONNECTED` tant que la base documentaire n'est pas connectée.
-- Configuration TypeScript stricte et scripts `dev`, `build`, `start` et `typecheck`.
-
-### Limites volontaires de cette fondation
-
-- Les écrans du catalogue et des fiches sont préparés, mais aucune notice réelle n'est encore renvoyée.
-- Le catalogue n'est pas encore connecté à Neon.
+- Les métadonnées d'une source et les droits des fichiers sont évalués séparément.
+- \`unknown\` n'autorise jamais la consultation, le téléchargement ou la redistribution.
+- Les identifiants bibliographiques sont validés et les doublons potentiels sont envoyés en revue.
+- Les notices provisoires ne sont pas présentées comme validées.
 - Aucune donnée bibliographique fictive n'est présentée comme réelle.
-- Aucune migration SQL n'est exécutée par l'application.
-- `/api/health` indique uniquement si `DATABASE_URL` est configurée ; il ne teste pas la connexion à la base.
-- Aucun mécanisme d'authentification n'est activé. L'identité devra être intégrée via Nexus Science après définition et validation du contrat de jeton.
-- Aucune notice fictive n'est présentée comme un résultat de recherche réel.
+- Aucun compte local ou mot de passe n'est créé ; l'intégration d'identité passera par Nexus Science après validation du contrat de jeton.
 
-### Déploiement initial
+## Développement local
 
-Dans Vercel, importer le dépôt `moses-kasonga/biblioth-que-scientifique` et sélectionner la branche `app/minimal-vercel-foundation`. Le framework doit être détecté comme **Next.js**. Aucun secret ni variable de connexion Neon n'est nécessaire pour ce premier déploiement de l'interface.
+Node.js 22+.
 
-Commandes locales :
-
-```bash
+\`\`\`bash
 npm install
+npm test
 npm run typecheck
 npm run build
 npm run start
-```
+\`\`\`
 
-Avant d'activer l'accès aux données, la connexion Neon devra être ajoutée côté serveur, après validation des migrations et des autorisations. Ne jamais exposer une chaîne de connexion ou un secret dans le navigateur.
+Le script \`prebuild\` exécute automatiquement les tests unitaires avant \`next build\`.
+
+## Prochaines étapes
+
+1. Tester l'importateur avec un petit export JSON réel de DOAB, d'abord en dry-run.
+2. Examiner le mapping, les notices sans langue/date/contributeurs et les doublons.
+3. Exécuter le pilote de 25 notices sur la seule branche Neon de développement, puis contrôler ses résultats.
+4. Faire évoluer les conversions CSV/MARCXML/KBART après validation du mapping correspondant.
+5. Préparer les imports de plus grande taille avec reprise, contrôle qualité et surveillance des droits.
+6. Définir le contrat d'identité Nexus Science avant toute activation des fonctionnalités personnelles.
+
+La base est connectée en développement ; aucune notice réelle n'a encore été importée. L'objectif de 100 000 notices est une cible de constitution du catalogue, pas un volume actuellement présent.

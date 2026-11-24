@@ -59,12 +59,35 @@ jobs:
             --dry-run > ./doab-dry-run.log 2>&1
           cat ./doab-dry-run.log
 
-      - name: Preserve source batch and dry-run report
+      - name: Probe official DOAB CC0 metadata feeds after REST rejection
+        if: failure()
+        run: |
+          mkdir -p doab-feed-probe
+          for name in DOAB.json DOAB_KBART_books.tsv DOAB.csv; do
+            url="https://memo.doabooks.org/file/oapen/$name"
+            {
+              echo "### $name"
+              curl --silent --show-error --head --location --max-time 20 "$url" || true
+              echo
+            } >> doab-feed-probe/headers.txt
+          done
+          # Read only a small prefix of the KBART feed to inspect its header and columns.
+          curl --silent --show-error --location --range 0-8191 \
+            --max-filesize 1048576 --max-time 30 \
+            "https://memo.doabooks.org/file/oapen/DOAB_KBART_books.tsv" \
+            --output doab-feed-probe/kbart-prefix.tsv || true
+          if [ -f doab-feed-probe/kbart-prefix.tsv ]; then
+            head -n 5 doab-feed-probe/kbart-prefix.tsv
+          fi
+
+      - name: Preserve source batch, reports, and feed probe
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: doab-pilot-${{ github.run_id }}
           path: |
             doab-batch.json
             doab-dry-run.log
-          if-no-files-found: error
+            doab-feed-probe/*
+          if-no-files-found: warn
           retention-days: 7

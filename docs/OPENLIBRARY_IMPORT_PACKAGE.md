@@ -51,3 +51,14 @@ Le manifeste est écrit en dernier. Les fichiers JSONL sont d'abord écrits sous
 Ce paquet n'est pas un fichier SQL et ne doit pas être envoyé directement à PostgreSQL. La prochaine étape distincte sera un importateur transactionnel utilisant les vraies clés de provenance, les tables \`bibliotheque.source_records\`, \`bibliotheque.source_record_links\`, \`bibliotheque.import_jobs\` et \`bibliotheque.import_records\`, ainsi que les entités Work/Edition/Agent. Il devra être idempotent, reprendre par lots et ne jamais créer de doublons canoniques en cas de relance.
 
 Toute première écriture restera conditionnée à un essai explicite sur la branche Neon de développement, avec un rôle limité et un lot pilote approuvé. La branche de production reste hors périmètre.
+
+
+## Vérification indépendante du paquet
+
+Avant de considérer un paquet comme prêt pour un importateur, exécuter :
+
+\`\`\`bash
+npm run verify:openlibrary -- --package-dir ./openlibrary-import-package
+\`\`\`
+
+Le vérificateur recalcule les SHA-256, analyse chaque JSONL, refuse les identifiants source dupliqués, contrôle la cohérence des motifs de revue, vérifie la fermeture du graphe Edition → Work → Auteur et compare les compteurs au manifeste. Il refuse un fichier modifié, une relation manquante même si le manifeste a été recalculé, ou un compteur incohérent. Il est indépendant du préparateur et ne se connecte jamais à Neon.

@@ -29,9 +29,10 @@ function parseArgs(argv) {
 function printHelp() {
   process.stdout.write(
     "Collecte ciblée depuis le flux JSON officiel DOAB (métadonnées CC0)\n\n" +
-    "node scripts/fetch-doab-json-feed.mjs --limit 25 --output ./doab-batch.json\n" +
+    "node scripts/fetch-doab-json-feed.mjs --limit 25 --offset 0 --output ./doab-batch.json\n" +
+    "node scripts/fetch-doab-json-feed.mjs --limit 25 --offset 1000 --output ./doab-batch-1000.json\n" +
     "node scripts/fetch-doab-json-feed.mjs --limit 25 --all-languages\n\n" +
-    "Le collecteur lit le flux en continu et s'arrête après le nombre demandé.\n" +
+    "Le collecteur lit le flux en continu et s'arrête après le nombre demandé. --offset permet de reprendre après un lot précédent.\n" +
     "Par défaut, il privilégie FR/EN/ES/PT et conserve les notices sans langue pour revue.\n" +
     "Aucun PDF, EPUB ou bitstream n'est téléchargé ; aucune donnée Neon n'est écrite.\n"
   );

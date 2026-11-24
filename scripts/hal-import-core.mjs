@@ -50,7 +50,7 @@ export function mapHalRecord(raw) {
   const rawLanguage = first(raw, ["language_s"]);
   const language = normalizeLanguage(rawLanguage);
   const authors = values(raw?.authFullName_s);
-  const editors = values(raw?.editorFullName_s ?? raw?.editor_s);
+  const editors = [];
   const publishers = values(raw?.publisher_s);
   const subjectValues = unique([
     ...values(raw?.keyword_s),
@@ -82,7 +82,7 @@ export function mapHalRecord(raw) {
 
   return {
     externalRecordId,
-    recordVersion: first(raw, ["modifiedDate_s", "modifiedDateY_i"]) || null,
+    recordVersion: null,
     recordUrl,
     title,
     authors: unique(authors),

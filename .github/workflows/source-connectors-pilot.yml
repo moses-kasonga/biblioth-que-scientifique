@@ -1,0 +1,49 @@
+name: Source connectors smoke test (dry-run only)
+
+on:
+  push:
+    branches:
+      - app/minimal-vercel-foundation
+    paths:
+      - .github/workflows/source-connectors-pilot.yml
+      - scripts/fetch-openalex.mjs
+      - scripts/openalex-import-core.mjs
+      - scripts/fetch-hal.mjs
+      - scripts/hal-import-core.mjs
+      - scripts/import-doab.mjs
+      - scripts/doab-import-core.mjs
+      - package.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: source-connectors-smoke-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  metadata-smoke:
+    if: ${{ github.ref == 'refs/heads/app/minimal-vercel-foundation' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out working branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Verify OpenAlex API and dry-run normalization
+        run: |
+          node scripts/fetch-openalex.mjs --limit 10 --from-year 1720 --to-year 2026 --output ./openalex-smoke.json
+          node -e "const d=require('./openalex-smoke.json'); if (!Array.isArray(d.results) || d.results.length === 0) throw new Error('OpenAlex returned no book records');"
+          node scripts/import-doab.mjs --source openalex --input ./openalex-smoke.json --max-records 10 --dry-run
+
+      - name: Verify HAL API and dry-run normalization
+        run: |
+          node scripts/fetch-hal.mjs --limit 10 --from-year 1720 --to-year 2026 --output ./hal-smoke.json
+          node -e "const d=require('./hal-smoke.json'); if (!Array.isArray(d.response?.docs) || d.response.docs.length === 0) throw new Error('HAL returned no OUV records');"
+          node scripts/import-doab.mjs --source hal --input ./hal-smoke.json --max-records 10 --dry-run

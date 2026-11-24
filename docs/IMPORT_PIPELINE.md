@@ -144,7 +144,7 @@ La première page peut être consultée sans clé. Les pages suivantes par curse
 
 ## HAL — ouvrages déposés
 
-Le connecteur scripts/fetch-hal.mjs utilise le point d'entrée officiel https://api.archives-ouvertes.fr/search/, le format JSON, le filtre docType_s:OUV et un tri par docid asc pour permettre une reprise avec cursorMark. Les pages sont plafonnées à 500 notices, conformément aux recommandations de performance de la documentation HAL. Les champs de fichiers ne sont volontairement pas demandés.
+Le connecteur scripts/fetch-hal.mjs utilise le point d'entrée officiel https://api.hal.science/search/, le format JSON, le filtre docType_s:OUV et un tri par docid asc pour permettre une reprise avec cursorMark. Les pages sont plafonnées à 500 notices, conformément aux recommandations de performance de la documentation HAL. Les champs de fichiers ne sont volontairement pas demandés.
 
 ```bash
 node scripts/fetch-hal.mjs --limit 50 --from-year 1720 --to-year 2026 --output ./hal-batch.json

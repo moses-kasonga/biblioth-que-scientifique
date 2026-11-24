@@ -43,7 +43,7 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) return help();
 
-  const endpoint = new URL("https://api.archives-ouvertes.fr/search/");
+  const endpoint = new URL("https://api.hal.science/search/");
   endpoint.searchParams.set("q", args.query.trim());
   endpoint.searchParams.set("fq", "docType_s:OUV");
   endpoint.searchParams.append("fq", "producedDateY_i:[" + args.fromYear + " TO " + args.toYear + "]");

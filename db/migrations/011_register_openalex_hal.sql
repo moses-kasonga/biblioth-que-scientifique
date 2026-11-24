@@ -23,9 +23,9 @@ VALUES
   (
     'hal',
     'HAL — Archive ouverte',
-    'https://api.archives-ouvertes.fr/search/',
-    'https://api.archives-ouvertes.fr/docs/search',
-    'https://api.archives-ouvertes.fr/docs/search',
+    'https://api.hal.science/search/',
+    'https://api.hal.science/docs/search',
+    'https://api.hal.science/docs/search',
     'Source bibliographique : HAL. Conserver l’identifiant HAL, l’URI de la notice, la date de collecte et les mentions de licence présentes dans la notice.',
     'API de recherche Solr JSON, filtre docType_s:OUV, pagination cursorMark triée par docid asc.',
     'Les métadonnées de notice et les fichiers déposés sont deux objets distincts. Conserver les champs de licence comme éléments de preuve, sans inférer une licence globale à partir du dépôt ou de la disponibilité d’un fichier. Vérifier les conditions HAL et les droits au niveau de chaque ressource avant tout accès ou réutilisation.',

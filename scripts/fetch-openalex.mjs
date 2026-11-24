@@ -50,10 +50,12 @@ async function main() {
   endpoint.searchParams.set("cursor", args.cursor);
   endpoint.searchParams.set("select", "id,ids,doi,title,display_name,type,publication_year,publication_date,language,authorships,keywords,topics,primary_topic,updated_date,open_access");
   if (args.search.trim()) endpoint.searchParams.set("search", args.search.trim());
-  if (process.env.OPENALEX_API_KEY) endpoint.searchParams.set("api_key", process.env.OPENALEX_API_KEY);
+  if (process.env.OPENALEX_MAILTO?.trim()) endpoint.searchParams.set("mailto", process.env.OPENALEX_MAILTO.trim());
 
+  const headers = { Accept: "application/json", "User-Agent": "BibliothequeScientifique-Nexus/0.1" };
+  if (process.env.OPENALEX_API_KEY) headers.Authorization = "Bearer " + process.env.OPENALEX_API_KEY;
   const response = await fetch(endpoint, {
-    headers: { Accept: "application/json", "User-Agent": "BibliothequeScientifique-Nexus/0.1" },
+    headers,
     signal: AbortSignal.timeout(30_000),
   });
   if (!response.ok) throw new Error("OpenAlex a répondu HTTP " + response.status + " " + response.statusText + ".");

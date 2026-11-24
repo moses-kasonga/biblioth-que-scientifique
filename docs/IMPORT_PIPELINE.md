@@ -11,23 +11,22 @@ DOAB indique que les métadonnées de son répertoire sont disponibles sous CC0.
 ### DOAB — source pilote
 
 - Métadonnées et identifiants : source principale du pilote.
-- Pour une sélection ponctuelle : DOAB Selective Export, optimisé pour des ensembles jusqu'à 500 titres (CSV actuellement pris en charge par ce parcours).
-- Pour des ensembles plus importants : flux complets MARCXML, KBART, ONIX, JSON ou moissonnage OAI-PMH.
-- API REST : recherche ciblée et récupération de métadonnées en JSON ou XML.
-- **Limite du script pilote actuel :** il lit les réponses JSON de l'API REST. Les exports CSV/KBART/MARCXML/ONIX et les enregistrements OAI-PMH exigent un convertisseur dédié et des tests de mapping ; ne pas les passer directement au script.
+- Le flux officiel JSON complet est disponible à `https://memo.doabooks.org/file/oapen/DOAB.json`. Il expose un tableau `publications` avec les métadonnées bibliographiques, le lien DOAB, ISBN, DOI, langue, éditeur, date, sujets et mentions de licence lorsque fournis.
+- Les métadonnées du répertoire DOAB sont disponibles sous CC0. Cette licence ne s'étend pas aux contenus des livres.
+- Pour les sélections ponctuelles, DOAB Selective Export est optimisé pour des ensembles jusqu'à 500 titres. Les flux complets comprennent MARCXML, KBART, ONIX, JSON et OAI-PMH.
+- API REST : recherche ciblée et récupération de métadonnées en JSON ou XML. L'API peut refuser certaines plages d'adresses. Dans ce cas, utiliser le flux officiel JSON plutôt qu'un proxy ou un miroir non autorisé.
 - Conserver l'identifiant externe, la version du record lorsqu'elle existe, l'horodatage de collecte, le JSON brut et son SHA-256.
 
-Le script actuel lit un fichier JSON exporté. Il ne fait pas lui-même de requête réseau vers DOAB : cela rend le lot inspectable et rejouable avant tout accès en écriture.
-
-Recherche ciblée via le collecteur versionné :
+Collecte du lot pilote depuis le flux JSON officiel :
 
 ```bash
-node scripts/fetch-doab-json.mjs \\
-  --query 'mathematics AND physics' \\
-  --output ./doab-batch.json
+node scripts/fetch-doab-json-feed.mjs --limit 25 --output ./doab-batch.json
+node scripts/import-doab.mjs --input ./doab-batch.json --max-records 25 --dry-run
 ```
 
-Le collecteur envoie une seule requête REST, demande JSON et ajoute obligatoirement `expand=metadata` : sans ce paramètre, DOAB peut renvoyer des fiches sans les champs bibliographiques détaillés. Il fixe aussi une limite explicite de 25 notices par défaut (paramètre `--limit`, maximum 500). Il ne demande pas `bitstreams` et ne télécharge aucun fichier. Il contrôle la réponse, enregistre le JSON brut localement et n'importe rien dans Neon. Inspecter ensuite le fichier et lancer le dry-run. La requête et le nombre de résultats dépendent du catalogue DOAB au moment de l'appel.
+Le collecteur lit le JSON en continu et s'arrête dès qu'il a sélectionné le nombre de notices demandé ; il ne télécharge pas le flux entier sur disque. Par défaut, il privilégie le français, l'anglais, l'espagnol et le portugais, tout en conservant les notices dont la langue est absente pour revue. Les notices dans d'autres langues sont ignorées, sauf avec `--all-languages`. Le maximum est de 500 notices par lot. Aucun `bitstream`, PDF ou EPUB n'est demandé ou téléchargé. La sortie locale est un petit fichier JSON rejouable. Le dry-run ne se connecte pas à Neon.
+
+Le collecteur REST `fetch-doab-json.mjs` reste disponible pour les recherches ciblées lorsque l'API REST est accessible ; il demande explicitement `expand=metadata`. Pour le pilote automatisé, le flux JSON officiel est le parcours de référence.
 
 ### Open Library — enrichissement secondaire
 

@@ -1,0 +1,17 @@
+"use client";
+import Link from "next/link";
+import { useLibraryLanguage } from "./library-shell";
+const copy={
+fr:{eyebrow:"NOTICE BIBLIOGRAPHIQUE",title:"Fiche d’ouvrage",intro:"Cette page réunira les informations d’une œuvre, ses traductions, ses éditions et ses identifiants.",unavailable:"Notice non chargée",text:"Aucune donnée bibliographique n’est affichée pour cet identifiant. La fiche sera alimentée lorsque le catalogue sera connecté et que la notice aura été vérifiée.",id:"Identifiant demandé",sections:["Œuvre","Traduction ou expression","Édition","Identifiants bibliographiques","Ressources numériques associées"],pending:"Donnée non disponible",back:"Retour au catalogue",access:"Consulter les règles d’accès"},
+en:{eyebrow:"BIBLIOGRAPHIC RECORD",title:"Work details",intro:"This page will bring together a work’s information, translations, editions and identifiers.",unavailable:"Record not loaded",text:"No bibliographic data is displayed for this identifier. The record will be populated once the catalogue is connected and the entry has been verified.",id:"Requested identifier",sections:["Work","Translation or expression","Edition","Bibliographic identifiers","Associated digital resources"],pending:"Data not available",back:"Back to catalogue",access:"View access rules"},
+es:{eyebrow:"REGISTRO BIBLIOGRÁFICO",title:"Ficha de la obra",intro:"Esta página reunirá la información de una obra, sus traducciones, ediciones e identificadores.",unavailable:"Registro no cargado",text:"No se muestran datos bibliográficos para este identificador. El registro se completará cuando el catálogo esté conectado y la entrada haya sido verificada.",id:"Identificador solicitado",sections:["Obra","Traducción o expresión","Edición","Identificadores bibliográficos","Recursos digitales asociados"],pending:"Dato no disponible",back:"Volver al catálogo",access:"Consultar las reglas de acceso"},
+pt:{eyebrow:"REGISTO BIBLIOGRÁFICO",title:"Ficha da obra",intro:"Esta página reunirá as informações de uma obra, as suas traduções, edições e identificadores.",unavailable:"Registo não carregado",text:"Não são apresentados dados bibliográficos para este identificador. O registo será preenchido quando o catálogo estiver ligado e a entrada tiver sido verificada.",id:"Identificador solicitado",sections:["Obra","Tradução ou expressão","Edição","Identificadores bibliográficos","Recursos digitais associados"],pending:"Dado indisponível",back:"Voltar ao catálogo",access:"Consultar as regras de acesso"}
+} as const;
+export default function RecordContent({recordId}:{recordId:string}){
+ const language=useLibraryLanguage(),t=copy[language];
+ return <main className="library-page"><section className="library-page-hero compact"><p className="library-eyebrow">{t.eyebrow}</p><h1>{t.title}</h1><p>{t.intro}</p></section>
+ <section className="record-placeholder"><div className="record-placeholder-heading"><span className="record-status-dot"/><div><h2>{t.unavailable}</h2><p>{t.text}</p></div></div>
+ <div className="record-id"><span>{t.id}</span><code>{recordId}</code></div>
+ <div className="record-fields">{t.sections.map(section=><article key={section}><h3>{section}</h3><p>{t.pending}</p></article>)}</div>
+ <div className="catalogue-actions"><Link className="library-button primary" href="/catalogue">{t.back}</Link><Link className="library-button secondary" href="/ressources">{t.access}</Link></div></section></main>;
+}

@@ -25,6 +25,7 @@ INSERT INTO bibliotheque.languages (code, name_native, name_english)
 VALUES
   ('fr', 'Français', 'French'),
   ('en', 'English', 'English'),
+  ('es', 'Español', 'Spanish'),
   ('pt', 'Português', 'Portuguese');
 
 CREATE TABLE bibliotheque.identifier_schemes (

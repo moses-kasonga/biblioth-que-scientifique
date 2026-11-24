@@ -161,7 +161,7 @@ export function mapDoabRecord(rawRecord) {
   const metadataHandle = firstValue(metadata, ["handle"]);
   const uuid = asString(record?.uuid ?? record?.id);
   const identifierUri = firstValue(metadata, ["dc.identifier.uri", "identifier.uri", "identifier"]);
-  const handleMatch = identifierUri.match(/\\/handle\\/([^?#]+)/i);
+  const handleMatch = identifierUri.match(/\/handle\/([^?#]+)/i);
   const handleFromIdentifier = handleMatch ? decodeURIComponent(handleMatch[1]) : "";
   const stableHandle = recordHandle || metadataHandle || handleFromIdentifier;
   const externalRecordId = stableHandle || uuid || identifierUri;

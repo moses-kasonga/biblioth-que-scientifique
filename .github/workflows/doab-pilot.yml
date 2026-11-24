@@ -71,14 +71,21 @@ jobs:
               echo
             } >> doab-feed-probe/headers.txt
           done
-          # Read only a small prefix of the KBART feed to inspect its header and columns.
-          curl --silent --show-error --location --range 0-8191 \
-            --max-filesize 1048576 --max-time 30 \
-            "https://memo.doabooks.org/file/oapen/DOAB_KBART_books.tsv" \
-            --output doab-feed-probe/kbart-prefix.tsv || true
-          if [ -f doab-feed-probe/kbart-prefix.tsv ]; then
-            head -n 5 doab-feed-probe/kbart-prefix.tsv
-          fi
+          # Read small prefixes only; some file servers ignore Range requests.
+          for entry in "DOAB.json:json-prefix.json" "DOAB.csv:csv-prefix.csv" "DOAB_KBART_books.tsv:kbart-prefix.tsv"; do
+            name="${entry%%:*}"
+            output="${entry#*:}"
+            curl --silent --show-error --location --range 0-8191 \
+              --max-filesize 1048576 --max-time 30 \
+              "https://memo.doabooks.org/file/oapen/$name" \
+              --output "doab-feed-probe/$output" || true
+          done
+          for file in doab-feed-probe/json-prefix.json doab-feed-probe/csv-prefix.csv doab-feed-probe/kbart-prefix.tsv; do
+            if [ -f "$file" ]; then
+              echo "### $file"
+              head -n 3 "$file" | cut -c1-500
+            fi
+          done
 
       - name: Preserve source batch, reports, and feed probe
         if: always()

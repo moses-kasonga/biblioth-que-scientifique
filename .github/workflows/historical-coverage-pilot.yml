@@ -1,0 +1,49 @@
+name: Historical coverage pilot 1720-2026 (dry-run only)
+
+on:
+  push:
+    branches:
+      - app/minimal-vercel-foundation
+    paths:
+      - .github/workflows/historical-coverage-pilot.yml
+      - scripts/run-historical-sampling.mjs
+      - scripts/fetch-openalex.mjs
+      - scripts/fetch-hal.mjs
+      - scripts/fetch-openlibrary.mjs
+      - scripts/openalex-import-core.mjs
+      - scripts/hal-import-core.mjs
+      - scripts/openlibrary-import-core.mjs
+      - scripts/import-doab.mjs
+      - scripts/doab-import-core.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: historical-coverage-pilot-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  historical-sampling:
+    if: ${{ github.ref == 'refs/heads/app/minimal-vercel-foundation' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out working branch
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Collect 12 stratified source batches and run dry-run normalization
+        run: node scripts/run-historical-sampling.mjs --limit 25 --out-dir ./historical-pilot
+        env:
+          OPENLIBRARY_CONTACT: ${{ vars.OPENLIBRARY_CONTACT }}
+      - name: Preserve raw batches, dry-run logs and comparison report
+        uses: actions/upload-artifact@v4
+        with:
+          name: historical-coverage-1720-2026-${{ github.run_id }}
+          path: historical-pilot/
+          if-no-files-found: error
+          retention-days: 7

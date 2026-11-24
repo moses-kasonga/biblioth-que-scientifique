@@ -11,8 +11,22 @@ L'exécuteur est volontairement limité à l'archivage des notices de provenance
 
 ## Pipeline
 
+Télécharger les dumps mensuels officiels (plusieurs Go au total). Le téléchargement est séquentiel, reprend les fichiers partiels et écrit un manifeste SHA-256 :
+
 ```bash
-node scripts/scan-openlibrary-dump.mjs --editions ol_dump_editions_latest.txt.gz --works ol_dump_works_latest.txt.gz --authors ol_dump_authors_latest.txt.gz
+npm run download:openlibrary
+```
+
+Pour tester uniquement le plus petit dump, sans télécharger les deux autres :
+
+```bash
+npm run download:openlibrary -- --only authors
+```
+
+Les fichiers sont placés dans `openlibrary-dumps/`. Le dump mensuel indiqué par Open Library peut être daté de plusieurs semaines ; le script suit les alias officiels `latest` et enregistre la destination redirigée dans le manifeste des fichiers téléchargés.
+
+```bash
+node scripts/scan-openlibrary-dump.mjs --editions ./openlibrary-dumps/ol_dump_editions_latest.txt.gz --works ./openlibrary-dumps/ol_dump_works_latest.txt.gz --authors ./openlibrary-dumps/ol_dump_authors_latest.txt.gz
 node scripts/prepare-openlibrary-import.mjs --input-dir ./openlibrary-dump-scan --out-dir ./openlibrary-import-package --max-editions 100000
 node scripts/verify-openlibrary-package.mjs --package-dir ./openlibrary-import-package
 node scripts/plan-openlibrary-import.mjs --package-dir ./openlibrary-import-package --out-dir ./openlibrary-import-plan --batch-size 500

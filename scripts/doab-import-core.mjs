@@ -156,10 +156,12 @@ export function mapDoabRecord(rawRecord) {
   const record = unwrapRecord(rawRecord);
   const metadata = metadataMap(record);
   const title = firstValue(metadata, ["dc.title", "title", "name"]);
-  const handle = firstValue(metadata, ["handle", "dc.identifier.uri"])
-    || asString(record?.handle ?? record?.handleUrl ?? record?.uuid ?? record?.id);
+  const recordHandle = asString(record?.handle ?? record?.handleUrl);
+  const metadataHandle = firstValue(metadata, ["handle"]);
   const uuid = asString(record?.uuid ?? record?.id);
-  const externalRecordId = handle || uuid;
+  const identifierUri = firstValue(metadata, ["dc.identifier.uri"]);
+  const stableHandle = recordHandle || metadataHandle;
+  const externalRecordId = stableHandle || uuid || identifierUri;
   const authors = valuesFor(metadata, ["dc.contributor.author", "dc.creator", "creator"]);
   const editors = valuesFor(metadata, ["dc.contributor.editor"]);
   const publishers = valuesFor(metadata, ["dc.publisher", "publisher"]);
@@ -179,9 +181,9 @@ export function mapDoabRecord(rawRecord) {
   const recordVersion = asString(record?.lastModified ?? record?.last_modified ?? record?.updatedAt)
     || asString(record?.version)
     || null;
-  const recordUrl = handle
-    ? (handle.startsWith("http") ? handle : "https://hdl.handle.net/" + handle.replace(/^\/+/, ""))
-    : null;
+  const recordUrl = stableHandle
+    ? (stableHandle.startsWith("http") ? stableHandle : "https://hdl.handle.net/" + stableHandle.replace(/^\/+/, ""))
+    : (identifierUri.startsWith("http") ? identifierUri : null);
   const normalizedIsbns = [...new Set(isbnRaw.map(normalizeIsbn).filter(Boolean))];
   const normalizedDois = [...new Set(doiRaw.map(normalizeDoi).filter(Boolean))];
 

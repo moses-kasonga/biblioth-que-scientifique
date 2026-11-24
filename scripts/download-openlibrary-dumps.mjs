@@ -135,8 +135,15 @@ async function downloadOne(kind, url, outDir, fresh) {
   return { kind, file: filename, bytes: current.size, sha256: await sha256File(finalPath), reused_existing_file: false };
 }
 
+export function validateDownloadSelection(only) {
+  if (!Array.isArray(only) || !only.length || only.some((k) => !Object.hasOwn(DUMPS, k)) || new Set(only).size !== only.length) {
+    throw new Error("Sélection de dumps invalide : choisissez une seule fois editions, works et/ou authors.");
+  }
+  return [...only];
+}
+
 export async function downloadOpenLibraryDumps({ outDir = "./openlibrary-dumps", only = Object.keys(DUMPS), fresh = false } = {}) {
-  if (!Array.isArray(only) || !only.length || only.some((k) => !Object.hasOwn(DUMPS, k))) throw new Error("Sélection de dumps invalide.");
+  validateDownloadSelection(only);
   const output = resolve(outDir);
   await mkdir(output, { recursive: true });
   const files = [];

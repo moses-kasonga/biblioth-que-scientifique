@@ -110,24 +110,39 @@ Les compteurs du lot et les lignes de `import_records` ne sont pas nécessaireme
 ### 2A. Même ISBN/DOI associé à plusieurs œuvres
 
 ```sql
+WITH identifier_work_refs AS (
+    SELECT bi.bibliographic_identifier_id, bi.scheme_code, bi.normalized_value, bi.work_id
+    FROM bibliotheque.bibliographic_identifiers bi
+    WHERE bi.work_id IS NOT NULL
+
+    UNION
+
+    SELECT bi.bibliographic_identifier_id, bi.scheme_code, bi.normalized_value, we.work_id
+    FROM bibliotheque.bibliographic_identifiers bi
+    JOIN bibliotheque.work_expressions we
+        ON we.expression_id = bi.expression_id
+
+    UNION
+
+    SELECT bi.bibliographic_identifier_id, bi.scheme_code, bi.normalized_value, ew.work_id
+    FROM bibliotheque.bibliographic_identifiers bi
+    JOIN bibliotheque.edition_works ew
+        ON ew.edition_id = bi.edition_id
+)
 SELECT
-    bi.scheme_code,
-    bi.normalized_value,
-    COUNT(DISTINCT COALESCE(bi.work_id, we.work_id, ew.work_id)) AS distinct_works,
-    COUNT(*) AS identifier_rows
-FROM bibliotheque.bibliographic_identifiers bi
-LEFT JOIN bibliotheque.work_expressions we
-    ON we.expression_id = bi.expression_id
-LEFT JOIN bibliotheque.edition_works ew
-    ON ew.edition_id = bi.edition_id
-WHERE bi.normalized_value IS NOT NULL
-  AND bi.scheme_code IN ('isbn', 'doi')
-GROUP BY bi.scheme_code, bi.normalized_value
-HAVING COUNT(DISTINCT COALESCE(bi.work_id, we.work_id, ew.work_id)) > 1
+    scheme_code,
+    normalized_value,
+    COUNT(DISTINCT work_id) AS distinct_works,
+    COUNT(DISTINCT bibliographic_identifier_id) AS identifier_rows
+FROM identifier_work_refs
+WHERE normalized_value IS NOT NULL
+  AND scheme_code IN ('isbn', 'doi')
+GROUP BY scheme_code, normalized_value
+HAVING COUNT(DISTINCT work_id) > 1
 ORDER BY distinct_works DESC, identifier_rows DESC;
 ```
 
-**Résultat attendu : aucune ligne.** Toute ligne retournée doit être examinée avant validation du lot. Une correspondance d'identifiant ne justifie jamais une fusion automatique d'œuvres.
+**Interprétation : chaque ligne est une collision potentielle à examiner, pas une preuve automatique de doublon.** Un identifiant attaché à une édition collective peut légitimement être relié à plusieurs œuvres ; le catalogueur doit vérifier l'édition, les relations et la granularité réelle de l'ISBN/DOI. Aucune fusion automatique n'est autorisée.
 
 Le modèle actuel impose également l'unicité de la paire `scheme_code` / `normalized_value`. Cette contrainte empêche la répétition physique d'un même identifiant normalisé dans la table ; le contrôle ci-dessus vérifie en plus qu'un identifiant n'est pas associé à plusieurs œuvres.
 
@@ -197,6 +212,7 @@ SELECT
         WHERE ew.work_id = w.work_id
           AND COALESCE(e.publication_year_from, e.publication_year_to) <= 2026
           AND COALESCE(e.publication_year_to, e.publication_year_from) >= 1720
+          AND (e.publication_year_from IS NULL OR e.publication_year_to IS NULL OR e.publication_year_from <= e.publication_year_to)
     ) AS missing_usable_publication_year
 FROM bibliotheque.works w
 WHERE w.record_status = 'provisional'

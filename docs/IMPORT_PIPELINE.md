@@ -22,8 +22,8 @@ Le script actuel lit un fichier JSON exporté. Il ne fait pas lui-même de requ�
 Recherche ciblée via le collecteur versionné :
 
 ```bash
-node scripts/fetch-doab-json.mjs \
-  --query 'mathematics AND physics' \
+node scripts/fetch-doab-json.mjs \\
+  --query 'mathematics AND physics' \\
   --output ./doab-batch.json
 ```
 
@@ -37,14 +37,14 @@ L'API Web Open Library est destinée aux usages orientés utilisateur, aux reche
 
 Pour chaque notice source :
 
-1. Stocker le record JSON brut dans \`source_records\`, avec son identifiant externe, sa version et son empreinte SHA-256.
+1. Stocker le record JSON brut dans `source_records`, avec son identifiant externe, sa version et son empreinte SHA-256.
 2. Normaliser titre, contributeurs, date, langue, sujets, ISBN et DOI.
 3. Vérifier les chiffres de contrôle ISBN-10/ISBN-13 et la syntaxe DOI.
 4. Proposer des disciplines uniquement lorsque les sujets source correspondent à des termes contrôlés.
 5. Chercher une correspondance d'identifiant dans le catalogue existant.
-6. Si un ISBN/DOI existe déjà, ajouter un lien de provenance \`same_as\` et marquer la notice pour revue ; ne jamais fusionner automatiquement.
-7. Sinon créer une œuvre, une expression et une édition au statut \`provisional\`, puis relier les contributeurs, sujets et identifiants disponibles.
-8. Créer les liens de provenance dans \`source_record_links\` et enregistrer le résultat dans \`import_records\`.
+6. Si un ISBN/DOI existe déjà, ajouter un lien de provenance `same_as` et marquer la notice pour revue ; ne jamais fusionner automatiquement.
+7. Sinon créer une œuvre, une expression et une édition au statut `provisional`, puis relier les contributeurs, sujets et identifiants disponibles.
+8. Créer les liens de provenance dans `source_record_links` et enregistrer le résultat dans `import_records`.
 
 Une notice de qualité incomplète reste en revue ; elle n'est pas automatiquement publiée comme notice validée.
 
@@ -54,47 +54,47 @@ Node.js 22+ est requis.
 
 ### 1. Préparer un export JSON
 
-Télécharger un petit export ciblé depuis DOAB et le sauvegarder dans un fichier local, par exemple \`doab-batch.json\`. Ne pas commiter ce fichier dans Git.
+Télécharger un petit export ciblé depuis DOAB et le sauvegarder dans un fichier local, par exemple `doab-batch.json`. Ne pas commiter ce fichier dans Git.
 
 ### 2. Effectuer le dry-run
 
-\`\`\`bash
+```bash
 node scripts/import-doab.mjs --input ./doab-batch.json --max-records 25
-\`\`\`
+```
 
 Le dry-run est le comportement par défaut. Il n'ouvre aucune connexion Neon et n'effectue aucune écriture. Il affiche les titres, années, langues, identifiants validés et problèmes détectés.
 
 ### 3. Précontrôle avant écriture
 
-L'exécution \`--apply\` exige \`DATABASE_IMPORT_URL\` pointant vers la branche Neon de développement et le rôle \`bibliotheque_importer\`.
+L'exécution `--apply` exige `DATABASE_IMPORT_URL` pointant vers la branche Neon de développement et le rôle `bibliotheque_importer`.
 
 Ne pas utiliser :
-- la connexion propriétaire \`neondb_owner\` ;
-- la variable de lecture \`DATABASE_URL\` de l'application ;
-- la branche Neon \`production\` ;
+- la connexion propriétaire `neondb_owner` ;
+- la variable de lecture `DATABASE_URL` de l'application ;
+- la branche Neon `production` ;
 - une variable Vercel Production.
 
-Le rôle \`bibliotheque_importer\` doit conserver les caractéristiques suivantes : pas de superutilisateur, pas de \`BYPASSRLS\`, pas d'accès aux coffres personnels, pas d'écriture des ressources numériques et pas d'écriture des déclarations de droits.
+Le rôle `bibliotheque_importer` doit conserver les caractéristiques suivantes : pas de superutilisateur, pas de `BYPASSRLS`, pas d'accès aux coffres personnels, pas d'écriture des ressources numériques et pas d'écriture des déclarations de droits.
 
 ### 4. Lancer un lot pilote
 
 Après vérification du fichier et du dry-run :
 
-\`\`\`bash
+```bash
 DATABASE_IMPORT_URL='postgresql://...' \\
   node scripts/import-doab.mjs \\
   --input ./doab-batch.json \\
   --max-records 25 \\
   --apply
-\`\`\`
+```
 
 La valeur de connexion est un secret local : ne jamais la coller dans le code, un terminal partagé, les journaux ou Git. Le pilote doit rester limité à 25 records par exécution. Une montée à 100 ou 500 records vient après examen du résultat et approbation du mapping.
 
 ## Ce que le pipeline ne fait volontairement pas
 
 - Il ne télécharge ni ne stocke les PDF/EPUB.
-- Il ne crée pas d'entrée dans \`digital_assets\`.
-- Il ne crée ni ne valide de droit dans \`rights_statements\`.
+- Il ne crée pas d'entrée dans `digital_assets`.
+- Il ne crée ni ne valide de droit dans `rights_statements`.
 - Il n'affirme pas que consultation, téléchargement ou redistribution sont permis.
 - Il ne transforme pas automatiquement une notice provisoire en notice active.
 - Il ne fusionne pas les notices en doublon.
@@ -116,3 +116,10 @@ Vérifier au minimum :
 - les recherches sur titres, auteurs, ISBN et DOI à travers l'API Preview.
 
 Le pilote n'est pas un engagement de volume. L'import initial vers 100 000 notices sera préparé seulement après validation du mapping, de la qualité, de l'idempotence et des droits.
+
+
+## Protocole de validation post-import
+
+Les contrôles SQL exécutables, les seuils d'acceptation, les interprétations des compteurs et les règles de décision sont centralisés dans le **PVI-001 — Protocole de validation des importations** : [consulter le protocole](./IMPORT_VALIDATION_PROTOCOL.md).
+
+Après chaque lot, exécuter ce protocole sur la même branche Neon de développement que celle utilisée pour l'import. Un statut de job terminé ou une insertion SQL réussie ne suffit pas à valider les notices. Les notices `review_required` restent en revue humaine et les notices créées restent `provisional` jusqu'à validation distincte.

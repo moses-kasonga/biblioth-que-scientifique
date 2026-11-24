@@ -155,7 +155,7 @@ HAL distingue les ouvrages (OUV) des chapitres (COUV) et des autres types docume
 
 ## Registre des sources et état de déploiement
 
-La migration 011_register_openalex_hal.sql a été appliquée à la branche Neon de développement. La migration 012_openlibrary_bulk_policy.sql met à jour la politique d'accès Open Library et sera appliquée séparément à la même branche. Aucune de ces migrations ne crée de notice bibliographique.
+Les migrations 011_register_openalex_hal.sql et 012_openlibrary_bulk_policy.sql ont toutes deux été appliquées à la branche Neon de développement. Elles enregistrent les sources et leurs politiques ; elles ne créent aucune notice bibliographique.
 
 Les commandes d'import ci-dessus sont en --dry-run. Elles n'ouvrent aucune connexion Neon. Avant toute écriture, conserver les contrôles de rôle, de droits, d'idempotence, de doublons d'identifiants et le protocole PVI-001. Ne jamais confondre le nombre total de Works OpenAlex, de notices HAL ou de notices de dépôt avec un nombre de livres uniques validés.
 
@@ -170,3 +170,6 @@ Pour un chargement massif, Open Library recommande ses dumps mensuels officiels 
 ## Campagne de couverture historique
 
 scripts/run-historical-sampling.mjs échantillonne quatre périodes — 1720–1899, 1900–1949, 1950–1999 et 2000–2026 — sur OpenAlex, HAL et Open Library. Il collecte 12 lots de 25 notices, exécute le normaliseur commun en --dry-run et produit un rapport comparatif JSON. Aucun lot n'est envoyé à Neon.
+
+
+Rapport de campagne historique (300 notices, 4 périodes, 3 sources) : docs/pilot-results/HISTORICAL-COVERAGE-300-2026-11-24.md.

@@ -124,6 +124,19 @@ const languages: { code: Language; label: string }[] = [
 
 export default function HomeContent() {
   const [language, setLanguage] = useState<Language>("fr");
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem("nexus-language");
+    if (saved === "fr" || saved === "en" || saved === "es" || saved === "pt") {
+      setLanguage(saved);
+    }
+  }, []);
+
+  const selectLanguage = (value: Language) => {
+    window.localStorage.setItem("nexus-language", value);
+    setLanguage(value);
+  };
+
   const t = copy[language];
 
   useEffect(() => {
@@ -147,7 +160,7 @@ export default function HomeContent() {
     <main className="site-shell" lang={language}>
       <header className="topbar">
         <a className="brand" href="/" aria-label={t.brandAria}>
-          <span className="brand-mark" aria-hidden="true">B</span>
+          <span className="brand-mark" aria-hidden="true">🧬</span>
           <span className="brand-name">
             <strong>NEXUS SCIENCE</strong>
             <span>{t.brandModule}</span>
@@ -158,7 +171,7 @@ export default function HomeContent() {
             <button
               key={item.code}
               type="button"
-              onClick={() => setLanguage(item.code)}
+              onClick={() => selectLanguage(item.code)}
               aria-pressed={language === item.code}
               className={language === item.code ? "language-active" : ""}
             >

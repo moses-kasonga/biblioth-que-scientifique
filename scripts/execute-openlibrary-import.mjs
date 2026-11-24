@@ -124,7 +124,13 @@ export async function runOpenLibraryExecutor(args) {
           }
           const d = operation.data;
           if (!d || d.canonical_write_allowed !== false || !d.payload || !operation.identity ||
-              operation.identity.source_code !== "openlibrary") throw new Error("Opération source invalide ou non autorisée.");
+              operation.identity.source_code !== "openlibrary" ||
+              !/^(OL\\d+M|OL\\d+W|OL\\d+A)$/.test(operation.identity.external_record_id ?? "") ||
+              !["edition", "work", "author"].includes(operation.identity.record_type) ||
+              !String(operation.identity.external_record_id).endsWith(({ edition: "M", work: "W", author: "A" })[operation.identity.record_type]) ||
+              sha(json(d.payload)) !== d.payload_sha256) {
+            throw new Error("Opération source invalide, empreinte payload incorrecte ou non autorisée.");
+          }
           const { external_record_id, source_record_version } = operation.identity;
           const upsert = await client.query(
             `INSERT INTO bibliotheque.source_records

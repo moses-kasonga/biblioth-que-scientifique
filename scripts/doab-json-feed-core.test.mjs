@@ -61,7 +61,7 @@ test("filters selected languages while scanning until the requested number is re
 
 test("rejects a truncated JSON object", async () => {
   await assert.rejects(
-    readJsonArrayItems(streamFromString('{"publications":[{"id":1,"title":"unfinished'),
+    readJsonArrayItems(streamFromString('{"publications":[{"id":1,"title":"unfinished'), {
       limit: 2,
     }),
     /terminé au milieu/

@@ -3,11 +3,12 @@ import { writeFile } from "node:fs/promises";
 import { normalizeDoabPayload } from "./doab-import-core.mjs";
 
 function parseArgs(argv) {
-  const args = { query: "", output: "./doab-batch.json", help: false };
+  const args = { query: "", output: "./doab-batch.json", limit: 25, help: false };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--query") args.query = argv[++i] ?? "";
     else if (arg === "--output") args.output = argv[++i] ?? args.output;
+    else if (arg === "--limit") args.limit = Number(argv[++i]);
     else if (arg === "--help" || arg === "-h") args.help = true;
     else throw new Error("Argument inconnu : " + arg);
   }
@@ -15,6 +16,9 @@ function parseArgs(argv) {
     throw new Error("--query est obligatoire, par exemple --query 'mathematics AND physics'.");
   }
   if (args.query.length > 500) throw new Error("La requête DOAB est limitée à 500 caractères.");
+  if (!Number.isInteger(args.limit) || args.limit < 1 || args.limit > 500) {
+    throw new Error("--limit doit être compris entre 1 et 500.");
+  }
   return args;
 }
 
@@ -32,6 +36,10 @@ async function main() {
 
   const endpoint = new URL("https://directory.doabooks.org/rest/search");
   endpoint.searchParams.set("query", args.query.trim());
+  endpoint.searchParams.set("limit", String(args.limit));
+  // DOAB only returns complete bibliographic metadata when explicitly expanded.
+  // Do not request bitstreams: this pipeline ingests metadata, never book files.
+  endpoint.searchParams.set("expand", "metadata");
 
   const response = await fetch(endpoint, {
     method: "GET",
@@ -62,6 +70,9 @@ async function main() {
     source: "doab",
     output: args.output,
     recordsFetched: records.length,
+    requestedLimit: args.limit,
+    expanded: "metadata",
+    bitstreamsRequested: false,
     recordsWithReviewIssues: incomplete,
     query: args.query.trim(),
     contentType,

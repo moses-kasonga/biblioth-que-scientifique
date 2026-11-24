@@ -29,4 +29,8 @@ Les migrations sont des fichiers SQL immuables, numérotés et appliqués dans l
 | `008_security_and_governance.sql` | Rôles métier, audit, privilèges et RLS |
 | `009_search.sql` | Recherche multilingue après validation des parcours |
 
-La migration 001 ne crée que le namespace. Les migrations suivantes seront ajoutées après revue du contrat de colonnes et des contraintes composites du dossier d'audit v0.3.
+Les migrations 001 à 008 sont actuellement rédigées sur la branche GitHub `docs/initial-foundation`. Elles couvrent le schéma, les référentiels, le catalogue, les éditions et sommaires, les ressources et droits, les sources et imports, le coffre personnel, la gouvernance et les politiques RLS.
+
+La migration 008 contient aussi des déclencheurs anti-cycle pour les compositions d'œuvres, la hiérarchie des sujets et les tables des matières. La migration 009 de recherche n'est pas créée : elle dépend de parcours de recherche et de critères de classement à définir.
+
+**Aucun de ces fichiers n'a été exécuté sur Neon.** La branche de développement existe, mais les migrations doivent encore être relues, validées syntaxiquement et testées sur cette branche avant toute décision de production.

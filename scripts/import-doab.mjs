@@ -381,7 +381,7 @@ async function importOne(pool, sourceSystemId, jobId, record) {
     );
     await saveImportRecord(client, jobId, sourceRecordId, outcome, detail);
     await client.query("COMMIT");
-    return outcome;
+    return { outcome, catalogueCreated: true };
   } catch (error) {
     await client.query("ROLLBACK").catch(() => {});
     if (sourceRecordId) {
@@ -491,15 +491,17 @@ async function main() {
     );
     jobId = job.rows[0].import_job_id;
 
-    const totals = { created: 0, review_required: 0, skipped: 0, failed: 0 };
+    const totals = { created: 0, review_required: 0, skipped: 0, failed: 0, catalogueCreated: 0 };
     for (const record of unique) {
       if (!record.externalRecordId) {
         totals.failed += 1;
         process.stderr.write("Notice ignorée : identifiant externe DOAB manquant.\n");
         continue;
       }
-      const outcome = await importOne(pool, source.rows[0].source_system_id, jobId, record);
+      const result = await importOne(pool, source.rows[0].source_system_id, jobId, record);
+      const outcome = typeof result === "string" ? result : result.outcome;
       totals[outcome] += 1;
+      if (typeof result === "object" && result.catalogueCreated) totals.catalogueCreated += 1;
     }
 
     const status = totals.failed ? "completed_with_errors" : "completed";
@@ -510,7 +512,7 @@ async function main() {
            records_created = $4, records_updated = 0,
            records_skipped = $5, records_failed = $6
        WHERE import_job_id = $1`,
-      [jobId, status, unique.length, totals.created,
+      [jobId, status, unique.length, totals.catalogueCreated,
         totals.skipped + totals.review_required, totals.failed]
     );
     process.stdout.write(JSON.stringify({ jobId, status, totals }, null, 2) + "\n");

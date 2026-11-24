@@ -65,10 +65,19 @@ SET search_path = pg_catalog, bibliotheque
 AS $function$
 DECLARE
   creates_cycle BOOLEAN;
+  exclude_old_edge BOOLEAN := FALSE;
+  old_parent_work_id UUID;
+  old_child_work_id UUID;
 BEGIN
   PERFORM pg_catalog.pg_advisory_xact_lock(
     pg_catalog.hashtextextended('bibliotheque.work_contents.graph', 0)
   );
+
+  IF TG_OP = 'UPDATE' THEN
+    exclude_old_edge := TRUE;
+    old_parent_work_id := OLD.parent_work_id;
+    old_child_work_id := OLD.child_work_id;
+  END IF;
 
   WITH RECURSIVE reachable(node_id) AS (
     SELECT NEW.child_work_id
@@ -76,9 +85,9 @@ BEGIN
     SELECT wc.child_work_id
     FROM bibliotheque.work_contents AS wc
     JOIN reachable AS r ON wc.parent_work_id = r.node_id
-    WHERE TG_OP <> 'UPDATE'
+    WHERE NOT exclude_old_edge
        OR (wc.parent_work_id, wc.child_work_id)
-          IS DISTINCT FROM (OLD.parent_work_id, OLD.child_work_id)
+          IS DISTINCT FROM (old_parent_work_id, old_child_work_id)
   )
   SELECT EXISTS (
     SELECT 1 FROM reachable WHERE node_id = NEW.parent_work_id
@@ -106,6 +115,10 @@ SET search_path = pg_catalog, bibliotheque
 AS $function$
 DECLARE
   creates_cycle BOOLEAN;
+  exclude_old_edge BOOLEAN := FALSE;
+  old_subject_id UUID;
+  old_related_subject_id UUID;
+  old_relation_type TEXT;
 BEGIN
   IF NEW.relation_type <> 'broader_than' THEN
     RETURN NEW;
@@ -115,6 +128,13 @@ BEGIN
     pg_catalog.hashtextextended('bibliotheque.subject_hierarchy.graph', 0)
   );
 
+  IF TG_OP = 'UPDATE' THEN
+    exclude_old_edge := TRUE;
+    old_subject_id := OLD.subject_id;
+    old_related_subject_id := OLD.related_subject_id;
+    old_relation_type := OLD.relation_type;
+  END IF;
+
   WITH RECURSIVE reachable(node_id) AS (
     SELECT NEW.related_subject_id
     UNION
@@ -123,9 +143,9 @@ BEGIN
     JOIN reachable AS r ON sr.subject_id = r.node_id
     WHERE sr.relation_type = 'broader_than'
       AND (
-        TG_OP <> 'UPDATE'
+        NOT exclude_old_edge
         OR (sr.subject_id, sr.related_subject_id, sr.relation_type)
-           IS DISTINCT FROM (OLD.subject_id, OLD.related_subject_id, OLD.relation_type)
+           IS DISTINCT FROM (old_subject_id, old_related_subject_id, old_relation_type)
       )
   )
   SELECT EXISTS (
@@ -154,6 +174,10 @@ SET search_path = pg_catalog, bibliotheque
 AS $function$
 DECLARE
   creates_cycle BOOLEAN;
+  exclude_old_edge BOOLEAN := FALSE;
+  old_edition_id UUID;
+  old_entry_id UUID;
+  old_parent_entry_id UUID;
 BEGIN
   IF NEW.parent_entry_id IS NULL THEN
     RETURN NEW;
@@ -169,6 +193,13 @@ BEGIN
     pg_catalog.hashtextextended('bibliotheque.edition_toc:' || NEW.edition_id::text, 0)
   );
 
+  IF TG_OP = 'UPDATE' THEN
+    exclude_old_edge := TRUE;
+    old_edition_id := OLD.edition_id;
+    old_entry_id := OLD.entry_id;
+    old_parent_entry_id := OLD.parent_entry_id;
+  END IF;
+
   WITH RECURSIVE reachable(node_id) AS (
     SELECT NEW.entry_id
     UNION
@@ -177,9 +208,9 @@ BEGIN
     JOIN reachable AS r
       ON toc.edition_id = NEW.edition_id
      AND toc.parent_entry_id = r.node_id
-    WHERE TG_OP <> 'UPDATE'
+    WHERE NOT exclude_old_edge
        OR (toc.edition_id, toc.entry_id, toc.parent_entry_id)
-          IS DISTINCT FROM (OLD.edition_id, OLD.entry_id, OLD.parent_entry_id)
+          IS DISTINCT FROM (old_edition_id, old_entry_id, old_parent_entry_id)
   )
   SELECT EXISTS (
     SELECT 1 FROM reachable WHERE node_id = NEW.parent_entry_id

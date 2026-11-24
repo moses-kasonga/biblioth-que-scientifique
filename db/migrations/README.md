@@ -27,10 +27,11 @@ Les migrations sont des fichiers SQL immuables, numérotés et appliqués dans l
 | `006_sources_and_imports.sql` | Sources, provenance et imports idempotents |
 | `007_personal_library.sql` | Coffres, collections, progression et historique |
 | `008_security_and_governance.sql` | Rôles métier, audit, privilèges et RLS |
-| `009_search.sql` | Recherche multilingue après validation des parcours |
+| `009_catalogue_facets.sql` | Référentiels multilingues de types de publication et disciplines |
+| `010_search.sql` | Recherche multilingue et classement, après validation des parcours |
 
 Les migrations 001 à 008 sont actuellement rédigées sur la branche GitHub `docs/initial-foundation`. Elles couvrent le schéma, les référentiels, le catalogue, les éditions et sommaires, les ressources et droits, les sources et imports, le coffre personnel, la gouvernance et les politiques RLS.
 
-La migration 008 contient aussi des déclencheurs anti-cycle pour les compositions d'œuvres, la hiérarchie des sujets et les tables des matières. La migration 009 de recherche n'est pas créée : elle dépend de parcours de recherche et de critères de classement à définir.
+La migration 008 contient aussi des déclencheurs anti-cycle pour les compositions d'œuvres, la hiérarchie des sujets et les tables des matières. La migration 009 de classification ajoute les types de publication et disciplines utilisés par les filtres du catalogue, avec leurs libellés FR/EN/ES/PT. La migration 010 dédiée à la recherche plein texte et au classement reste différée jusqu'à validation des parcours et des critères.
 
 **Aucun de ces fichiers n'a été exécuté sur Neon.** La branche de développement existe, mais les migrations doivent encore être relues, validées syntaxiquement et testées sur cette branche avant toute décision de production.

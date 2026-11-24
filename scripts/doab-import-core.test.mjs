@@ -95,3 +95,12 @@ test("rejects an unknown DOAB response wrapper instead of silently importing zer
     /Format DOAB non reconnu/
   );
 });
+
+test("uses a repository UUID as source identity without fabricating a handle URL", () => {
+  const record = mapDoabRecord({
+    uuid: "doab-uuid-only",
+    metadata: [{ key: "dc.title", value: "Title without a handle" }],
+  });
+  assert.equal(record.externalRecordId, "doab-uuid-only");
+  assert.equal(record.recordUrl, null);
+});

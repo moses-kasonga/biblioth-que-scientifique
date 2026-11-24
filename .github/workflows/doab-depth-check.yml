@@ -1,0 +1,54 @@
+name: DOAB depth check at offset 1000 (dry-run only)
+
+on:
+  push:
+    branches:
+      - app/minimal-vercel-foundation
+    paths:
+      - .github/workflows/doab-depth-check.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: doab-depth-check-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  collect-and-dry-run:
+    if: ${{ github.ref == 'refs/heads/app/minimal-vercel-foundation' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Check out the application branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Collect 25 eligible DOAB records from offset 1000
+        run: |
+          node scripts/fetch-doab-json-feed.mjs \
+            --limit 25 \
+            --offset 1000 \
+            --output ./doab-batch.json
+
+      - name: Run importer in dry-run mode
+        run: |
+          node scripts/import-doab.mjs \
+            --input ./doab-batch.json \
+            --max-records 25 \
+            --dry-run > ./doab-dry-run.log 2>&1
+          cat ./doab-dry-run.log
+
+      - name: Preserve source batch and dry-run report
+        uses: actions/upload-artifact@v4
+        with:
+          name: doab-depth-check-1000-${{ github.run_id }}
+          path: |
+            doab-batch.json
+            doab-dry-run.log
+          if-no-files-found: error
+          retention-days: 7

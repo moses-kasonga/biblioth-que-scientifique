@@ -38,6 +38,8 @@ export async function GET(request: Request) {
   const publicationType = url.searchParams.get("type") ?? "all";
   const fromYear = Number(url.searchParams.get("from") ?? 1720);
   const toYear = Number(url.searchParams.get("to") ?? 2026);
+  const requestedLanguage = (url.searchParams.get("lang") ?? "fr").slice(0, 10);
+  const language = ["fr", "en", "es", "pt"].includes(requestedLanguage) ? requestedLanguage : "fr";
   const page = Math.max(1, Number(url.searchParams.get("page") ?? 1) || 1);
   const limit = Math.min(MAX_PAGE_SIZE, Math.max(1, Number(url.searchParams.get("limit") ?? 20) || 20));
   const offset = (page - 1) * limit;
@@ -73,7 +75,7 @@ export async function GET(request: Request) {
   try {
     const pool = getPool();
     const result = await pool.query(
-      \`SELECT
+      `SELECT
          w.work_id,
          w.work_type,
          w.description,
@@ -173,9 +175,9 @@ export async function GET(request: Request) {
          AND COALESCE(w.creation_year_to, w.creation_year_from, 9999) >= $5
          AND COALESCE(w.creation_year_from, w.creation_year_to, 1) <= $6
        ORDER BY w.updated_at DESC, w.work_id
-       LIMIT $7 OFFSET $8\`,
+       LIMIT $7 OFFSET $8`,
       [
-        (url.searchParams.get("lang") ?? "fr").slice(0, 10),
+        language,
         query,
         discipline,
         publicationType,

@@ -134,6 +134,7 @@ export async function runOpenLibraryExecutor(args) {
              DO UPDATE SET payload = EXCLUDED.payload, payload_sha256 = EXCLUDED.payload_sha256,
                record_status = CASE WHEN EXCLUDED.record_status = 'review_required' THEN 'review_required' ELSE bibliotheque.source_records.record_status END
              WHERE bibliotheque.source_records.payload_sha256 IS DISTINCT FROM EXCLUDED.payload_sha256
+                OR (EXCLUDED.record_status = 'review_required' AND bibliotheque.source_records.record_status <> 'review_required')
              RETURNING source_record_id, (xmax = 0) AS inserted`,
             [source.rows[0].source_system_id, external_record_id, source_record_version || "unknown",
               JSON.stringify(d.payload), d.payload_sha256, d.source_status === "review_required" ? "review_required" : "new"]
@@ -176,7 +177,7 @@ export async function runOpenLibraryExecutor(args) {
         count(*) FILTER (WHERE outcome='created')::bigint AS created,
         count(*) FILTER (WHERE outcome='updated')::bigint AS updated,
         count(*) FILTER (WHERE outcome='skipped')::bigint AS skipped,
-        count(*) FILTER (WHERE outcome IN ('failed','review_required'))::bigint AS failed
+        count(*) FILTER (WHERE outcome='failed')::bigint AS failed
        FROM bibliotheque.import_records WHERE import_job_id = $1`, [jobId]);
     await pool.query(
       "UPDATE bibliotheque.import_jobs SET status = 'completed', completed_at = now(), records_seen = $2, records_created = $3, records_updated = $4, records_skipped = $5, records_failed = $6 WHERE import_job_id = $1",

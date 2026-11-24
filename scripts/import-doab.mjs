@@ -325,22 +325,22 @@ async function importOne(pool, sourceSystemId, jobId, record) {
       }
     }
 
-    for (const isbn of record.isbns) {
+    for (const identifier of record.isbnIdentifiers) {
       await client.query(
         `INSERT INTO bibliotheque.bibliographic_identifiers
            (scheme_code, identifier_value, normalized_value, edition_id, is_preferred)
-         VALUES ('isbn', $1, $1, $2, TRUE)
+         VALUES ('isbn', $1, $2, $3, TRUE)
          ON CONFLICT (scheme_code, normalized_value) DO NOTHING`,
-        [isbn, editionId]
+        [identifier.sourceValue, identifier.normalizedValue, editionId]
       );
     }
-    for (const doi of record.dois) {
+    for (const identifier of record.doiIdentifiers) {
       await client.query(
         `INSERT INTO bibliotheque.bibliographic_identifiers
            (scheme_code, identifier_value, normalized_value, edition_id, is_preferred)
-         VALUES ('doi', $1, $1, $2, TRUE)
+         VALUES ('doi', $1, $2, $3, TRUE)
          ON CONFLICT (scheme_code, normalized_value) DO NOTHING`,
-        [doi, editionId]
+        [identifier.sourceValue, identifier.normalizedValue, editionId]
       );
     }
 

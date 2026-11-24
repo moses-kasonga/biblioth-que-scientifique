@@ -89,8 +89,10 @@ export async function runOpenLibraryExecutor(args) {
   const completed = new Set(checkpoint?.completed_batches ?? []);
   const totals = { source_records_created: 0, source_records_updated: 0, source_records_unchanged: 0, review_required: 0, deferred_canonical_operations: 0, batches_committed: 0 };
   try {
-    const identity = await pool.query("SELECT current_database() AS database_name, current_user AS role_name, inet_server_addr()::text AS server_address");
-    if (identity.rows[0]?.database_name !== "neondb") throw new Error("Base inattendue : import bloqué.");
+    const identity = await pool.query("SELECT current_database() AS database_name, current_setting('neon.branch_id', true) AS neon_branch_id");
+    if (identity.rows[0]?.database_name !== "neondb" || identity.rows[0]?.neon_branch_id !== EXPECTED_BRANCH) {
+      throw new Error("Cible Neon non conforme : l'identifiant réel de branche ne correspond pas à la branche de développement autorisée.");
+    }
     const source = await pool.query("SELECT source_system_id FROM bibliotheque.source_systems WHERE source_code = 'openlibrary' AND is_active = true");
     if (source.rowCount !== 1) throw new Error("Source Open Library absente ou inactive.");
     if (!jobId) {

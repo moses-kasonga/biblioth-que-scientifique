@@ -1,4 +1,4 @@
-name: Source connectors smoke test (dry-run only)
+name: OpenAlex + HAL 25-record pilot (dry-run only)
 
 on:
   push:
@@ -19,14 +19,14 @@ permissions:
   contents: read
 
 concurrency:
-  group: source-connectors-smoke-${{ github.ref }}
+  group: source-connectors-pilot-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  metadata-smoke:
+  metadata-pilot:
     if: ${{ github.ref == 'refs/heads/app/minimal-vercel-foundation' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Check out working branch
         uses: actions/checkout@v4
@@ -36,14 +36,100 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Verify OpenAlex API and dry-run normalization
+      - name: Collect 25 OpenAlex book records
         run: |
-          node scripts/fetch-openalex.mjs --limit 10 --from-year 1720 --to-year 2026 --output ./openalex-smoke.json
-          node -e "const d=require('./openalex-smoke.json'); if (!Array.isArray(d.results) || d.results.length === 0) throw new Error('OpenAlex returned no book records');"
-          node scripts/import-doab.mjs --source openalex --input ./openalex-smoke.json --max-records 10 --dry-run
+          node scripts/fetch-openalex.mjs --limit 25 --from-year 1720 --to-year 2026 --output ./openalex-batch.json
+          node -e "const d=require('./openalex-batch.json'); if (d.results?.length !== 25) throw new Error('Expected exactly 25 OpenAlex records');"
 
-      - name: Verify HAL API and dry-run normalization
+      - name: Normalize OpenAlex records (dry-run only)
+        run: node scripts/import-doab.mjs --source openalex --input ./openalex-batch.json --max-records 25 --dry-run > ./openalex-dry-run.log 2>&1
+
+      - name: Collect 25 HAL book records
         run: |
-          node scripts/fetch-hal.mjs --limit 10 --from-year 1720 --to-year 2026 --output ./hal-smoke.json
-          node -e "const d=require('./hal-smoke.json'); if (!Array.isArray(d.response?.docs) || d.response.docs.length === 0) throw new Error('HAL returned no OUV records');"
-          node scripts/import-doab.mjs --source hal --input ./hal-smoke.json --max-records 10 --dry-run
+          node scripts/fetch-hal.mjs --limit 25 --from-year 1720 --to-year 2026 --output ./hal-batch.json
+          node -e "const d=require('./hal-batch.json'); if (d.response?.docs?.length !== 25) throw new Error('Expected exactly 25 HAL OUV records');"
+
+      - name: Normalize HAL records (dry-run only)
+        run: node scripts/import-doab.mjs --source hal --input ./hal-batch.json --max-records 25 --dry-run > ./hal-dry-run.log 2>&1
+
+      - name: Compare metadata quality and duplicate candidates
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile, writeFile } from 'node:fs/promises';
+          import { normalizeOpenAlexPayload } from './scripts/openalex-import-core.mjs';
+          import { normalizeHalPayload } from './scripts/hal-import-core.mjs';
+          const openalexPayload = JSON.parse(await readFile('./openalex-batch.json', 'utf8'));
+          const halPayload = JSON.parse(await readFile('./hal-batch.json', 'utf8'));
+          const sources = {
+            openalex: normalizeOpenAlexPayload(openalexPayload),
+            hal: normalizeHalPayload(halPayload),
+          };
+          function countValues(values) {
+            const map = new Map();
+            for (const value of values) if (value) map.set(value, (map.get(value) || 0) + 1);
+            return map;
+          }
+          function summarize(records) {
+            const ids = records.map((r) => r.externalRecordId).filter(Boolean);
+            const idCounts = countValues(ids);
+            const languages = {};
+            const issues = {};
+            const years = records.map((r) => r.publicationYear).filter(Number.isInteger);
+            const isbnCounts = countValues(records.flatMap((r) => r.isbns));
+            const doiCounts = countValues(records.flatMap((r) => r.dois));
+            for (const r of records) {
+              const lang = r.language || 'unknown';
+              languages[lang] = (languages[lang] || 0) + 1;
+              for (const issue of r.issues) issues[issue] = (issues[issue] || 0) + 1;
+            }
+            return {
+              selected: records.length,
+              uniqueSourceIds: idCounts.size,
+              duplicateSourceIds: [...idCounts].filter(([, n]) => n > 1).map(([id, count]) => ({ id, count })),
+              publicationYearRange: years.length ? { min: Math.min(...years), max: Math.max(...years) } : null,
+              recordsWithoutYear: records.filter((r) => !Number.isInteger(r.publicationYear)).length,
+              recordsOutside1720To2026: records.filter((r) => Number.isInteger(r.publicationYear) && (r.publicationYear < 1720 || r.publicationYear > 2026)).length,
+              languages,
+              recordsWithoutTitle: records.filter((r) => !r.title).length,
+              recordsWithoutContributor: records.filter((r) => r.authors.length + r.editors.length === 0).length,
+              recordsWithReviewIssues: records.filter((r) => r.issues.length > 0).length,
+              issueCounts: issues,
+              recordsWithISBN: records.filter((r) => r.isbns.length > 0).length,
+              recordsWithDOI: records.filter((r) => r.dois.length > 0).length,
+              repeatedISBNValuesWithinBatch: [...isbnCounts].filter(([, n]) => n > 1).map(([value, count]) => ({ value, count })),
+              repeatedDOIValuesWithinBatch: [...doiCounts].filter(([, n]) => n > 1).map(([value, count]) => ({ value, count })),
+            };
+          }
+          const openAlexIsbns = new Set(sources.openalex.flatMap((r) => r.isbns));
+          const halIsbns = new Set(sources.hal.flatMap((r) => r.isbns));
+          const openAlexDois = new Set(sources.openalex.flatMap((r) => r.dois));
+          const halDois = new Set(sources.hal.flatMap((r) => r.dois));
+          const intersect = (a, b) => [...a].filter((value) => b.has(value)).sort();
+          const report = {
+            generatedAt: new Date().toISOString(),
+            mode: 'dry-run-only; no Neon connection or write performed',
+            sources: { openalex: summarize(sources.openalex), hal: summarize(sources.hal) },
+            crossSourceIdentifierOverlap: {
+              sharedISBNValues: intersect(openAlexIsbns, halIsbns),
+              sharedDOIValues: intersect(openAlexDois, halDois),
+              note: 'Shared ISBN/DOI values are candidate duplicate matches for human review, not automatic merges.'
+            }
+          };
+          if (sources.openalex.length !== 25 || sources.hal.length !== 25) throw new Error('Pilot must contain exactly 25 records per source');
+          if (report.sources.openalex.duplicateSourceIds.length || report.sources.hal.duplicateSourceIds.length) throw new Error('Duplicate source record IDs detected within a source batch');
+          await writeFile('./source-comparison-report.json', JSON.stringify(report, null, 2) + '\n');
+          console.log(JSON.stringify(report, null, 2));
+          NODE
+
+      - name: Preserve raw batches and validation report
+        uses: actions/upload-artifact@v4
+        with:
+          name: openalex-hal-pilot-${{ github.run_id }}
+          path: |
+            openalex-batch.json
+            hal-batch.json
+            openalex-dry-run.log
+            hal-dry-run.log
+            source-comparison-report.json
+          if-no-files-found: error
+          retention-days: 7

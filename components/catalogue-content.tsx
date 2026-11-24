@@ -33,7 +33,7 @@ export default function CatalogueContent(){
         <div className="catalogue-filter-grid">
           <label>{t.discipline}<select value={discipline} onChange={e=>setDiscipline(e.target.value)}><option value="all">{t.allDisciplines}</option>{disciplines.map((v,i)=><option key={v} value={v}>{t.disciplines[i]}</option>)}</select></label>
           <label>{t.type}<select value={type} onChange={e=>setType(e.target.value)}><option value="all">{t.allTypes}</option>{types.map((v,i)=><option key={v} value={v}>{t.types[i]}</option>)}</select></label>
-          <fieldset className="catalogue-period"><legend>{t.period}</legend><label><span>{t.from}</span><input type="number" min="1720" max="2026" value={fromYear} onChange={e=>setFromYear(e.target.value)}/></label><label><span>{t.to}</span><input type="number" min="1720" max="2026" value={toYear} onChange={e=>setToYear(e.target.value)}/></label></fieldset>
+          <fieldset className="catalogue-period"><legend>{t.period}</legend><label><span>{t.from}</span><input type="number" min="1720" value={fromYear} onChange={e=>setFromYear(e.target.value)}/></label><label><span>{t.to}</span><input type="number" min="1720" value={toYear} onChange={e=>setToYear(e.target.value)}/></label></fieldset>
         </div>
         {invalidYears&&<p className="form-hint error-text" role="alert">{t.invalidYears}</p>}
         <div className="catalogue-actions"><button className="library-button primary" type="submit" disabled={state==="loading"||invalidYears}>{state==="loading"?"…":t.search}</button><button className="library-button secondary" type="button" onClick={reset}>{t.reset}</button></div>

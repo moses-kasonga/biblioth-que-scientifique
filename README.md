@@ -61,7 +61,7 @@ Le pipeline :
 
 Open Library reste une source secondaire pour des recherches ciblées. Ses dumps mensuels, et non son API Web, sont à privilégier pour les volumes importants.
 
-Voir [la procédure d'import](docs/IMPORT_PIPELINE.md).
+Voir [la procédure d'import](docs/IMPORT_PIPELINE.md) et le [protocole de validation post-import PVI-001](docs/IMPORT_VALIDATION_PROTOCOL.md).
 
 ### Récupération ciblée et dry-run
 

@@ -234,6 +234,7 @@ WHERE w.record_status = 'provisional'
           WHERE ew.work_id = w.work_id
             AND COALESCE(e.publication_year_from, e.publication_year_to) <= 2026
             AND COALESCE(e.publication_year_to, e.publication_year_from) >= 1720
+            AND (e.publication_year_from IS NULL OR e.publication_year_to IS NULL OR e.publication_year_from <= e.publication_year_to)
       )
   )
 ORDER BY w.created_at;

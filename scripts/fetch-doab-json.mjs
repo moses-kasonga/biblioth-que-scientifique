@@ -45,13 +45,19 @@ async function main() {
     method: "GET",
     headers: {
       Accept: "application/json",
-      "User-Agent": "BibliothequeScientifique-Nexus/0.1",
+      "User-Agent": "BibliothequeScientifique-Nexus/0.1 (+https://github.com/moses-kasonga/biblioth-que-scientifique)",
     },
     signal: AbortSignal.timeout(20_000),
   });
 
   if (!response.ok) {
-    throw new Error("DOAB a répondu HTTP " + response.status + " " + response.statusText + ".");
+    const responseDetail = (await response.text().catch(() => ""))
+      .replace(/\\s+/g, " ")
+      .slice(0, 300);
+    throw new Error(
+      "DOAB a répondu HTTP " + response.status + " " + response.statusText +
+      (responseDetail ? " — " + responseDetail : "") + "."
+    );
   }
   const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.toLowerCase().includes("json")) {

@@ -2,6 +2,7 @@ export async function readJsonArrayItems(readable, options = {}) {
   const {
     arrayKey = "publications",
     limit = 25,
+    skip = 0,
     acceptRecord = () => true,
     maxScanned = 100_000,
     maxRecordChars = 10_000_000,
@@ -13,8 +14,11 @@ export async function readJsonArrayItems(readable, options = {}) {
   if (!Number.isInteger(limit) || limit < 1) {
     throw new RangeError("limit doit être un entier positif.");
   }
-  if (!Number.isInteger(maxScanned) || maxScanned < limit) {
-    throw new RangeError("maxScanned doit être supérieur ou égal à limit.");
+  if (!Number.isInteger(skip) || skip < 0) {
+    throw new RangeError("skip doit être un entier positif ou nul.");
+  }
+  if (!Number.isInteger(maxScanned) || maxScanned < skip + limit) {
+    throw new RangeError("maxScanned doit être supérieur ou égal à skip + limit.");
   }
 
   const reader = readable.getReader();
@@ -33,6 +37,7 @@ export async function readJsonArrayItems(readable, options = {}) {
   let stopReason = null;
   let scanned = 0;
   let rejected = 0;
+  let skippedByOffset = 0;
   const records = [];
 
   function consume(chunk) {
@@ -93,8 +98,13 @@ export async function readJsonArrayItems(readable, options = {}) {
         if (depth === 0) {
           const record = JSON.parse(recordBuffer);
           scanned += 1;
-          if (acceptRecord(record)) records.push(record);
-          else rejected += 1;
+          if (!acceptRecord(record)) {
+            rejected += 1;
+          } else if (skippedByOffset < skip) {
+            skippedByOffset += 1;
+          } else {
+            records.push(record);
+          }
 
           inRecord = false;
           recordBuffer = "";
@@ -143,6 +153,7 @@ export async function readJsonArrayItems(readable, options = {}) {
     records,
     scanned,
     rejected,
+    skippedByOffset,
     stopReason,
   };
 }

@@ -6,6 +6,8 @@ on:
       - app/minimal-vercel-foundation
     paths:
       - .github/workflows/doab-depth-check.yml
+      - scripts/doab-json-feed-core.mjs
+      - scripts/doab-json-feed-core.test.mjs
 
 permissions:
   contents: read

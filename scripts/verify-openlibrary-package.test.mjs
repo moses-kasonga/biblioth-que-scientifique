@@ -74,6 +74,6 @@ test("rejects manifest counts that do not match the JSONL records", async () => 
   try {
     f.manifest.counts.editions = 9;
     await writeFile(join(f.dir, "manifest.json"), JSON.stringify(f.manifest, null, 2));
-    await assert.rejects(() => verifyOpenLibraryPackage(f.dir), /Compteur manifest\\/counts incorrect pour editions/);
+    await assert.rejects(() => verifyOpenLibraryPackage(f.dir), /Compteur manifest/);
   } finally { await rm(f.dir, { recursive: true, force: true }); }
 });

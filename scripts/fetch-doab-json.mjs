@@ -64,12 +64,19 @@ async function main() {
     throw new Error("La requête DOAB n'a renvoyé aucune notice exploitable.");
   }
 
+  const recordsWithTitles = records.filter((record) => Boolean(record.title)).length;
+  if (recordsWithTitles === 0) {
+    throw new Error("DOAB a renvoyé des résultats sans titre bibliographique. Vérifiez expand=metadata avant toute importation.");
+  }
+
   await writeFile(args.output, JSON.stringify(payload, null, 2) + "\n", "utf8");
   const incomplete = records.filter((record) => record.issues.length > 0).length;
   process.stdout.write(JSON.stringify({
     source: "doab",
     output: args.output,
     recordsFetched: records.length,
+    recordsWithTitles,
+    recordsWithSourceIdentifiers: records.filter((record) => Boolean(record.externalRecordId)).length,
     requestedLimit: args.limit,
     expanded: "metadata",
     bitstreamsRequested: false,

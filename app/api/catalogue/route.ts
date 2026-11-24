@@ -79,8 +79,20 @@ export async function GET(request: Request) {
          w.work_id,
          w.work_type,
          w.description,
-         w.creation_year_from,
-         w.creation_year_to,
+         COALESCE(
+           (SELECT min(e.publication_year_from)
+            FROM bibliotheque.edition_works ew
+            JOIN bibliotheque.editions e ON e.edition_id = ew.edition_id
+            WHERE ew.work_id = w.work_id),
+           w.creation_year_from
+         ) AS publication_year_from,
+         COALESCE(
+           (SELECT max(e.publication_year_to)
+            FROM bibliotheque.edition_works ew
+            JOIN bibliotheque.editions e ON e.edition_id = ew.edition_id
+            WHERE ew.work_id = w.work_id),
+           w.creation_year_to
+         ) AS publication_year_to,
          COALESCE(
            (
              SELECT jsonb_agg(jsonb_build_object(
@@ -172,8 +184,27 @@ export async function GET(request: Request) {
              WHERE wpt.work_id = w.work_id AND wpt.publication_type_code = $4
            )
          )
-         AND COALESCE(w.creation_year_to, w.creation_year_from, 9999) >= $5
-         AND COALESCE(w.creation_year_from, w.creation_year_to, 1) <= $6
+         AND (
+           EXISTS (
+             SELECT 1
+             FROM bibliotheque.edition_works ew
+             JOIN bibliotheque.editions e ON e.edition_id = ew.edition_id
+             WHERE ew.work_id = w.work_id
+               AND COALESCE(e.publication_year_to, e.publication_year_from, 9999) >= $5
+               AND COALESCE(e.publication_year_from, e.publication_year_to, 1) <= $6
+           )
+           OR (
+             NOT EXISTS (
+               SELECT 1
+               FROM bibliotheque.edition_works ew
+               JOIN bibliotheque.editions e ON e.edition_id = ew.edition_id
+               WHERE ew.work_id = w.work_id
+                 AND (e.publication_year_from IS NOT NULL OR e.publication_year_to IS NOT NULL)
+             )
+             AND COALESCE(w.creation_year_to, w.creation_year_from, 9999) >= $5
+             AND COALESCE(w.creation_year_from, w.creation_year_to, 1) <= $6
+           )
+         )
        ORDER BY w.updated_at DESC, w.work_id
        LIMIT $7 OFFSET $8`,
       [

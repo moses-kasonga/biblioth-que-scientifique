@@ -7,6 +7,8 @@
   },
   "scripts": {
     "dev": "next dev",
+    "test": "node --test scripts/*.test.mjs",
+    "prebuild": "npm test",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit"

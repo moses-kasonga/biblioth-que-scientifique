@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { normalizeDoabPayload, normalizeText } from "./doab-import-core.mjs";
 import { normalizeOpenAlexPayload } from "./openalex-import-core.mjs";
 import { normalizeHalPayload } from "./hal-import-core.mjs";
+import { normalizeOpenLibraryPayload } from "./openlibrary-import-core.mjs";
 
 const DEFAULT_MAX = 25;
 const MAX_BATCH = 500;
@@ -20,7 +21,7 @@ function parseArgs(argv) {
     else if (arg === "--help" || arg === "-h") result.help = true;
     else throw new Error("Argument inconnu : " + arg);
   }
-  if (!["doab", "openalex", "hal"].includes(result.source)) {
+  if (!["doab", "openalex", "hal", "openlibrary"].includes(result.source)) {
     throw new Error("--source doit être doab, openalex ou hal.");
   }
   if (!Number.isInteger(result.max) || result.max < 1 || result.max > MAX_BATCH) {
@@ -31,10 +32,11 @@ function parseArgs(argv) {
 
 function help() {
   process.stdout.write(
-    "Import catalogue — DOAB, OpenAlex ou HAL\n\n" +
+    "Import catalogue — DOAB, OpenAlex, HAL ou Open Library\n\n" +
     "node scripts/import-doab.mjs --source doab --input ./doab-batch.json\n" +
     "node scripts/import-doab.mjs --source openalex --input ./openalex-batch.json\n" +
     "node scripts/import-doab.mjs --source hal --input ./hal-batch.json\n" +
+    "node scripts/import-doab.mjs --source openlibrary --input ./openlibrary-batch.json\n" +
     "DATABASE_IMPORT_URL='...' node scripts/import-doab.mjs --source openalex --input ./openalex-batch.json --apply\n\n" +
     "Dry-run par défaut. --apply exige une source enregistrée et le rôle Neon bibliotheque_importer.\n"
   );
@@ -199,6 +201,17 @@ async function importOne(pool, sourceSystemId, jobId, record) {
         [sourceRecordId]
       );
       await saveImportRecord(client, jobId, sourceRecordId, "review_required", "Titre absent ; payload source conservé, aucun ouvrage créé.");
+      await client.query("COMMIT");
+      return "review_required";
+    }
+
+    if (Array.isArray(record.issues) && record.issues.length > 0) {
+      const detail = "Contrôles requis : " + record.issues.join(", ") + ". Payload source conservé ; aucun ouvrage ou aucune édition canonique créé.";
+      await client.query(
+        "UPDATE bibliotheque.source_records SET record_status = 'review_required' WHERE source_record_id = $1",
+        [sourceRecordId]
+      );
+      await saveImportRecord(client, jobId, sourceRecordId, "review_required", detail);
       await client.query("COMMIT");
       return "review_required";
     }
@@ -414,7 +427,7 @@ async function main() {
   if (!args.input) throw new Error("--input est obligatoire.");
 
   const payload = JSON.parse(await readFile(args.input, "utf8"));
-  const normalizers = { doab: normalizeDoabPayload, openalex: normalizeOpenAlexPayload, hal: normalizeHalPayload };
+  const normalizers = { doab: normalizeDoabPayload, openalex: normalizeOpenAlexPayload, hal: normalizeHalPayload, openlibrary: normalizeOpenLibraryPayload };
   const records = normalizers[args.source](payload).slice(0, args.max);
   const seen = new Set();
   const unique = records.filter((record) => {

@@ -6,6 +6,7 @@ on:
       - app/minimal-vercel-foundation
     paths:
       - .github/workflows/doab-pilot.yml
+      - scripts/fetch-doab-json.mjs
   workflow_dispatch:
     inputs:
       query:

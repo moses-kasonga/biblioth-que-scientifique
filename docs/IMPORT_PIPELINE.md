@@ -183,3 +183,8 @@ Exemple après téléchargement des dumps officiels sur un stockage/runner dispo
 node scripts/scan-openlibrary-dump.mjs --editions ./ol_dump_editions_latest.txt.gz --works ./ol_dump_works_latest.txt.gz --authors ./ol_dump_authors_latest.txt.gz --from-year 1720 --to-year 2026 --max-editions 100000 --out-dir ./openlibrary-dump-sample
 
 Le scanner prépare les lots Work/Edition séparés. L'importateur transactionnel en base devra ensuite créer ou retrouver les Works, lier plusieurs Editions à un même Work, contrôler les doublons et traiter les anomalies avant toute insertion catalogue.
+
+
+## Préparation d'un paquet d'import Open Library
+
+Après l'extraction des dumps, exécuter `npm run prepare:openlibrary -- --input-dir ./openlibrary-dump-scan --out-dir ./openlibrary-import-package --max-editions 100000`. Ce préparateur produit un paquet JSONL distinct pour les Editions, Works, Auteurs et relations, plus un manifeste avec empreintes SHA-256 et anomalies. Il contrôle les liens manquants, les identifiants source en conflit et les ISBN présents sur plusieurs Editions. Il ne se connecte pas à Neon et n'écrit aucune donnée catalogue. Le protocole détaillé est dans [OPENLIBRARY_IMPORT_PACKAGE.md](./OPENLIBRARY_IMPORT_PACKAGE.md). Le paquet n'est pas encore un format d'import SQL : l'importateur transactionnel devra être conçu et validé séparément sur la branche de développement.

@@ -27,7 +27,7 @@ node scripts/fetch-doab-json.mjs \\
   --output ./doab-batch.json
 ```
 
-Le collecteur envoie une seule requête REST, demande JSON, contrôle la réponse et vérifie que le format contient des notices reconnues. Il n'importe rien dans Neon. Inspecter ensuite le fichier et lancer le dry-run. La requête et le nombre de résultats dépendent du catalogue DOAB au moment de l'appel.
+Le collecteur envoie une seule requête REST, demande JSON et ajoute obligatoirement `expand=metadata` : sans ce paramètre, DOAB peut renvoyer des fiches sans les champs bibliographiques détaillés. Il fixe aussi une limite explicite de 25 notices par défaut (paramètre `--limit`, maximum 500). Il ne demande pas `bitstreams` et ne télécharge aucun fichier. Il contrôle la réponse, enregistre le JSON brut localement et n'importe rien dans Neon. Inspecter ensuite le fichier et lancer le dry-run. La requête et le nombre de résultats dépendent du catalogue DOAB au moment de l'appel.
 
 ### Open Library — enrichissement secondaire
 
@@ -123,3 +123,11 @@ Le pilote n'est pas un engagement de volume. L'import initial vers 100 000 notic
 Les contrôles SQL exécutables, les seuils d'acceptation, les interprétations des compteurs et les règles de décision sont centralisés dans le **PVI-001 — Protocole de validation des importations** : [consulter le protocole](./IMPORT_VALIDATION_PROTOCOL.md).
 
 Après chaque lot, exécuter ce protocole sur la même branche Neon de développement que celle utilisée pour l'import. Un statut de job terminé ou une insertion SQL réussie ne suffit pas à valider les notices. Les notices `review_required` restent en revue humaine et les notices créées restent `provisional` jusqu'à validation distincte.
+
+
+### Paramètres du collecteur
+
+- `--query` : expression de recherche DOAB obligatoire.
+- `--limit` : nombre maximal demandé à l'API ; 25 par défaut, maximum 500.
+- `--output` : chemin du fichier JSON local.
+- Le collecteur développe uniquement les métadonnées (`expand=metadata)). Il ne demande jamais `expand=bitstreams`.

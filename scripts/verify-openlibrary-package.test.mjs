@@ -98,6 +98,61 @@ test("accepts unresolved links whose source key is explicitly conflicted", async
   } finally { await rm(f.dir, { recursive: true, force: true }); }
 });
 
+
+test("rejects an unresolved Edition–Work link when the Edition is not flagged for review", async () => {
+  const f = await fixture();
+  try {
+    const edition = line({
+      source_record: { record_type: "edition", external_record_id: "OL100M" },
+      work_external_ids: ["OL404W"], review_required: false, review_reasons: [],
+    });
+    const relationships = line({
+      from_type: "edition", from_id: "OL100M", to_type: "work", to_id: "OL404W",
+      relation: "edition_works", resolved: false, review_required: true,
+    });
+    await writeFile(join(f.dir, f.files.editions), edition);
+    await writeFile(join(f.dir, f.files.works), "");
+    await writeFile(join(f.dir, f.files.authors), "");
+    await writeFile(join(f.dir, f.files.relationships), relationships);
+    f.manifest.outputs.editions.sha256 = hash(edition);
+    f.manifest.outputs.works.sha256 = hash("");
+    f.manifest.outputs.authors.sha256 = hash("");
+    f.manifest.outputs.relationships.sha256 = hash(relationships);
+    f.manifest.counts = { editions: 1, works: 0, authors: 0, relationships: 1 };
+    f.manifest.quality.unresolvedEditionWorkLinks = 1;
+    f.manifest.quality.unresolvedWorkAuthorLinks = 0;
+    await writeFile(join(f.dir, "manifest.json"), JSON.stringify(f.manifest, null, 2));
+    await assert.rejects(() => verifyOpenLibraryPackage(f.dir), /Edition OL100M doit être marquée review_required/);
+  } finally { await rm(f.dir, { recursive: true, force: true }); }
+});
+
+test("rejects an unresolved Work–Author link when the Work is not flagged for review", async () => {
+  const f = await fixture();
+  try {
+    const work = line({
+      source_record: { record_type: "work", external_record_id: "OL10W" },
+      author_external_ids: ["OL404A"], review_required: false, review_reasons: [],
+    });
+    const relationships = line({
+      from_type: "work", from_id: "OL10W", to_type: "agent", to_id: "OL404A",
+      relation: "work_agents", role_code: "author", resolved: false, review_required: true,
+    });
+    await writeFile(join(f.dir, f.files.editions), "");
+    await writeFile(join(f.dir, f.files.works), work);
+    await writeFile(join(f.dir, f.files.authors), "");
+    await writeFile(join(f.dir, f.files.relationships), relationships);
+    f.manifest.outputs.editions.sha256 = hash("");
+    f.manifest.outputs.works.sha256 = hash(work);
+    f.manifest.outputs.authors.sha256 = hash("");
+    f.manifest.outputs.relationships.sha256 = hash(relationships);
+    f.manifest.counts = { editions: 0, works: 1, authors: 0, relationships: 1 };
+    f.manifest.quality.unresolvedEditionWorkLinks = 0;
+    f.manifest.quality.unresolvedWorkAuthorLinks = 1;
+    await writeFile(join(f.dir, "manifest.json"), JSON.stringify(f.manifest, null, 2));
+    await assert.rejects(() => verifyOpenLibraryPackage(f.dir), /Work OL10W doit être marquée review_required/);
+  } finally { await rm(f.dir, { recursive: true, force: true }); }
+});
+
 test("rejects manifest counts that do not match the JSONL records", async () => {
   const f = await fixture();
   try {

@@ -84,6 +84,7 @@ export async function verifyOpenLibraryPackage(packageDir) {
   const counts = { editions: 0, works: 0, authors: 0, relationships: 0 };
   const ids = { editions: new Set(), works: new Set(), authors: new Set() };
   const conflictedIds = { editions: new Set(), works: new Set(), authors: new Set() };
+  const reviewRequired = { editions: new Map(), works: new Map() };
   const expectedEditionWorks = new Set();
   const expectedWorkAuthors = new Set();
   const actualRelations = new Set();
@@ -100,6 +101,7 @@ export async function verifyOpenLibraryPackage(packageDir) {
       const id = record.external_record_id;
       if (ids[name].has(id)) throw new Error(name + ": identifiant source répété " + id + ".");
       ids[name].add(id);
+      if (name === "editions" || name === "works") reviewRequired[name].set(id, item.review_required);
       if (item.review_reasons.includes("duplicate_source_record_id_conflicting_payloads")) conflictedIds[name].add(id);
       counts[name] += 1;
       if (name === "editions") {
@@ -127,7 +129,12 @@ export async function verifyOpenLibraryPackage(packageDir) {
       const resolved = ids.editions.has(relation.from_id) && !conflictedIds.editions.has(relation.from_id) &&
         ids.works.has(relation.to_id) && !conflictedIds.works.has(relation.to_id);
       if (relation.resolved !== resolved) throw new Error("Résolution Edition–Work incorrecte : " + relation.from_id + " → " + relation.to_id + ".");
-      if (!resolved) unresolved.editionWork += 1;
+      if (!resolved) {
+        if (reviewRequired.editions.get(relation.from_id) !== true) {
+          throw new Error("Edition " + relation.from_id + " doit être marquée review_required lorsqu'un lien Work est non résolu.");
+        }
+        unresolved.editionWork += 1;
+      }
     } else if (relation.relation === "work_agents" && relation.from_type === "work" && relation.to_type === "agent") {
       const key = relation.from_id + "\u0000" + relation.to_id;
       if (actualRelations.has("wa:" + key)) throw new Error("Lien Work–Auteur dupliqué.");
@@ -135,7 +142,12 @@ export async function verifyOpenLibraryPackage(packageDir) {
       const resolved = ids.works.has(relation.from_id) && !conflictedIds.works.has(relation.from_id) &&
         ids.authors.has(relation.to_id) && !conflictedIds.authors.has(relation.to_id);
       if (relation.resolved !== resolved) throw new Error("Résolution Work–Auteur incorrecte : " + relation.from_id + " → " + relation.to_id + ".");
-      if (!resolved) unresolved.workAuthor += 1;
+      if (!resolved) {
+        if (reviewRequired.works.get(relation.from_id) !== true) {
+          throw new Error("Work " + relation.from_id + " doit être marquée review_required lorsqu'un lien Auteur est non résolu.");
+        }
+        unresolved.workAuthor += 1;
+      }
     } else {
       throw new Error("Type de relation non autorisé dans le paquet.");
     }

@@ -1,6 +1,7 @@
 import {
   mapDiscipline,
   normalizeLanguage,
+  normalizeIsbn,
   parsePublicationYear,
 } from "./doab-import-core.mjs";
 
@@ -17,15 +18,18 @@ function list(value) {
   return items.map(asText).filter(Boolean);
 }
 
-function openLibraryWorkId(value) {
+function openLibraryIdentifier(value) {
   const key = asText(value);
-  const match = key.match(/(?:^|\/)works\/(OL[0-9]+W)$/i);
-  return match ? match[1].toUpperCase() : (/^OL[0-9]+W$/i.test(key) ? key.toUpperCase() : null);
+  const match = key.match(/(OL[0-9]+[WM])$/i);
+  if (!match) return null;
+  const id = match[1].toUpperCase();
+  return { id, level: id.endsWith("M") ? "edition" : "work" };
 }
 
 export function mapOpenLibraryWork(raw) {
   const key = asText(raw?.key);
-  const externalRecordId = openLibraryWorkId(key);
+  const identifier = openLibraryIdentifier(key);
+  const externalRecordId = identifier?.id ?? null;
   const title = asText(raw?.title);
   const publicationYear = parsePublicationYear(raw?.first_publish_year);
   const authors = [...new Set(list(raw?.author_name))];
@@ -34,7 +38,17 @@ export function mapOpenLibraryWork(raw) {
   const subjects = [...new Set(list(raw?.subject))];
   const editionKeys = [...new Set(list(raw?.edition_key))];
   const candidateIsbns = [...new Set(list(raw?.isbn))];
-  const issues = ["work_level_record_requires_edition_resolution"];
+  const editionResolved = identifier?.level === "edition" &&
+    editionKeys.length === 1 && editionKeys[0].toUpperCase() === externalRecordId;
+  const issues = editionResolved ? [] : ["work_level_record_requires_edition_resolution"];
+  const isbnIdentifiers = editionResolved
+    ? candidateIsbns
+        .map((sourceValue) => ({ sourceValue, normalizedValue: normalizeIsbn(sourceValue) }))
+        .filter((item) => item.normalizedValue)
+        .filter((item, index, all) =>
+          all.findIndex((candidate) => candidate.normalizedValue === item.normalizedValue) === index
+        )
+    : [];
 
   if (!externalRecordId) issues.push("missing_external_record_id");
   if (!title) issues.push("missing_title");
@@ -46,29 +60,39 @@ export function mapOpenLibraryWork(raw) {
   return {
     externalRecordId,
     recordVersion: null,
-    recordUrl: externalRecordId ? "https://openlibrary.org/works/" + externalRecordId : null,
+    recordUrl: externalRecordId
+      ? "https://openlibrary.org/" + (editionResolved ? "books/" : "works/") + externalRecordId
+      : null,
     title,
     authors,
     editors: [],
-    publisher: "",
+    publisher: editionResolved ? list(raw?.publisher)[0] ?? "" : "",
     publicationYear,
     publicationDateDisplay: publicationYear ? String(publicationYear) : null,
     language,
     rawLanguage: rawLanguages[0] ?? null,
     subjects,
     disciplines: mapDiscipline(subjects),
-    // Work-level Search API rows can aggregate identifiers from multiple Editions.
-    // Never attach those ISBNs to an invented single Edition.
-    isbns: [],
+    // A single M-keyed result with one matching edition_key is edition-level.
+    // Otherwise keep aggregated ISBNs as candidates without attaching them to one Edition.
+    isbns: isbnIdentifiers.map((item) => item.normalizedValue),
     dois: [],
-    isbnIdentifiers: [],
+    isbnIdentifiers,
     doiIdentifiers: [],
-    rawIdentifiers: [],
+    rawIdentifiers: editionResolved ? candidateIsbns : [],
     editionKeys,
     candidateIsbns,
     editionCount: Number.isInteger(raw?.edition_count) ? raw.edition_count : null,
     rightsEvidence: [],
-    issues: [...new Set(issues)],
+    identifierLevel: identifier?.level ?? "unknown",
+    issues: [
+      ...new Set([
+        ...issues,
+        ...(editionResolved && candidateIsbns.length > 0 && isbnIdentifiers.length === 0
+          ? ["bibliographic_identifiers_failed_validation"]
+          : []),
+      ]),
+    ],
     raw,
   };
 }

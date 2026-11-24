@@ -74,3 +74,17 @@ test("splits comma-separated ISBN values returned by HAL Solr", () => {
   assert.deepEqual(record.isbns, ["9782746222168", "9782746236691"]);
   assert.deepEqual(record.issues, []);
 });
+
+test("splits whitespace-separated ISBNs without breaking spaced ISBN formatting", () => {
+  const record = mapHalRecord({
+    docid: "space-separated-isbn",
+    title_s: ["A book with two ISBN values"],
+    language_s: ["fr"],
+    producedDateY_i: 1998,
+    authFullName_s: ["Example Author"],
+    docType_s: "OUV",
+    isbn_s: "2738432085 9782738432087",
+  });
+  assert.deepEqual(record.isbns, ["2738432085", "9782738432087"]);
+  assert.deepEqual(record.issues, []);
+});

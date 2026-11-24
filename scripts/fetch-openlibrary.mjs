@@ -35,10 +35,10 @@ async function main() {
 
   const endpoint = new URL("https://openlibrary.org/search.json");
   endpoint.searchParams.set("q", "(" + args.query.trim() + ") AND first_publish_year:[" + args.fromYear + " TO " + args.toYear + "]");
-  endpoint.searchParams.set("sort", "old");
+  endpoint.searchParams.set("sort", "random");
   endpoint.searchParams.set("page", String(args.page));
   endpoint.searchParams.set("limit", String(args.limit));
-  endpoint.searchParams.set("fields", "key,title,author_name,author_key,first_publish_year,edition_count,edition_key,isbn,language,subject");
+  endpoint.searchParams.set("fields", "key,title,author_name,author_key,first_publish_year,edition_count,edition_key,isbn,publisher,language,subject");
 
   const headers = { Accept: "application/json", "User-Agent": "BibliothequeScientifiqueNexus/0.1" };
   if (process.env.OPENLIBRARY_CONTACT?.trim()) headers["User-Agent"] += " (contact: " + process.env.OPENLIBRARY_CONTACT.trim() + ")";
@@ -55,7 +55,7 @@ async function main() {
       query: args.query.trim(),
       fromYear: args.fromYear,
       toYear: args.toYear,
-      sort: "old",
+      sort: "random",
       page: args.page,
       limit: args.limit,
       purpose: "low-volume discovery sample; not bulk harvesting",

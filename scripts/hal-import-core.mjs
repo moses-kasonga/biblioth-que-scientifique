@@ -58,7 +58,11 @@ export function mapHalRecord(raw) {
     ...values(raw?.domain_s),
   ]);
   const doiValues = values(raw?.doiId_s);
-  const isbnValues = unique(values(raw?.isbn_s).flatMap((value) => value.split(/[;,]/).map((item) => item.trim()).filter(Boolean)));
+  const isbnValues = unique(values(raw?.isbn_s).flatMap((value) => {
+    // Try the complete value first so ISBNs with internal spaces remain valid.
+    if (normalizeIsbn(value)) return [value];
+    return value.split(/[;,|\s]+/).map((item) => item.trim()).filter((item) => normalizeIsbn(item));
+  }));
   const doiIdentifiers = normalizeIdentifiers(doiValues, normalizeDoi);
   const isbnIdentifiers = normalizeIdentifiers(isbnValues, normalizeIsbn);
   const docType = first(raw, ["docType_s"]).toUpperCase();

@@ -2,20 +2,26 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { normalizeDoabPayload, normalizeText } from "./doab-import-core.mjs";
+import { normalizeOpenAlexPayload } from "./openalex-import-core.mjs";
+import { normalizeHalPayload } from "./hal-import-core.mjs";
 
 const DEFAULT_MAX = 25;
 const MAX_BATCH = 500;
 
 function parseArgs(argv) {
-  const result = { input: null, apply: false, max: DEFAULT_MAX, help: false };
+  const result = { input: null, apply: false, max: DEFAULT_MAX, source: "doab", help: false };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--input") result.input = argv[++i] ?? null;
     else if (arg === "--max-records") result.max = Number(argv[++i]);
+    else if (arg === "--source") result.source = argv[++i] ?? "doab";
     else if (arg === "--apply") result.apply = true;
     else if (arg === "--dry-run") result.apply = false;
     else if (arg === "--help" || arg === "-h") result.help = true;
     else throw new Error("Argument inconnu : " + arg);
+  }
+  if (!["doab", "openalex", "hal"].includes(result.source)) {
+    throw new Error("--source doit être doab, openalex ou hal.");
   }
   if (!Number.isInteger(result.max) || result.max < 1 || result.max > MAX_BATCH) {
     throw new Error("--max-records doit être compris entre 1 et " + MAX_BATCH + ".");
@@ -25,10 +31,12 @@ function parseArgs(argv) {
 
 function help() {
   process.stdout.write(
-    "Import pilote DOAB\n\n" +
-    "node scripts/import-doab.mjs --input ./doab-batch.json\n" +
-    "DATABASE_IMPORT_URL='...' node scripts/import-doab.mjs --input ./doab-batch.json --apply\n\n" +
-    "Dry-run par défaut. --apply nécessite le rôle Neon bibliotheque_importer.\n"
+    "Import catalogue — DOAB, OpenAlex ou HAL\n\n" +
+    "node scripts/import-doab.mjs --source doab --input ./doab-batch.json\n" +
+    "node scripts/import-doab.mjs --source openalex --input ./openalex-batch.json\n" +
+    "node scripts/import-doab.mjs --source hal --input ./hal-batch.json\n" +
+    "DATABASE_IMPORT_URL='...' node scripts/import-doab.mjs --source openalex --input ./openalex-batch.json --apply\n\n" +
+    "Dry-run par défaut. --apply exige une source enregistrée et le rôle Neon bibliotheque_importer.\n"
   );
 }
 
@@ -374,7 +382,7 @@ async function importOne(pool, sourceSystemId, jobId, record) {
     const outcome = record.issues.length ? "review_required" : "created";
     const detail = record.issues.length
       ? "Notice créée en statut provisional. Contrôles requis : " + record.issues.join(", ")
-      : "Notice provisoire créée depuis DOAB ; les droits des fichiers restent à vérifier.";
+      : "Notice provisoire créée depuis la source ; les droits des fichiers restent à vérifier.";
     await client.query(
       "UPDATE bibliotheque.source_records SET record_status = $2 WHERE source_record_id = $1",
       [sourceRecordId, outcome === "created" ? "linked" : "review_required"]
@@ -392,7 +400,7 @@ async function importOne(pool, sourceSystemId, jobId, record) {
       ).catch(() => {});
       await client.query("COMMIT").catch(() => {});
     }
-    process.stderr.write("Import DOAB échoué pour " + (record.externalRecordId ?? "(sans ID)") + ": " +
+    process.stderr.write("Import source échoué pour " + (record.externalRecordId ?? "(sans ID)") + ": " +
       (error instanceof Error ? error.message : String(error)) + "\n");
     return "failed";
   } finally {
@@ -406,7 +414,8 @@ async function main() {
   if (!args.input) throw new Error("--input est obligatoire.");
 
   const payload = JSON.parse(await readFile(args.input, "utf8"));
-  const records = normalizeDoabPayload(payload).slice(0, args.max);
+  const normalizers = { doab: normalizeDoabPayload, openalex: normalizeOpenAlexPayload, hal: normalizeHalPayload };
+  const records = normalizers[args.source](payload).slice(0, args.max);
   const seen = new Set();
   const unique = records.filter((record) => {
     if (!record.externalRecordId) return true;
@@ -417,7 +426,7 @@ async function main() {
 
   process.stdout.write(JSON.stringify({
     mode: args.apply ? "apply" : "dry-run",
-    source: "doab",
+    source: args.source,
     selected: unique.length,
     records: unique.map((record) => ({
       sourceId: record.externalRecordId,
@@ -447,7 +456,7 @@ async function main() {
     max: 2,
     idleTimeoutMillis: 5000,
     connectionTimeoutMillis: 5000,
-    application_name: "bibliotheque-scientifique-doab-import",
+    application_name: "bibliotheque-scientifique-" + args.source + "-import",
   });
   let jobId = null;
 
@@ -474,9 +483,10 @@ async function main() {
       throw new Error("Le registre des migrations 001 à 010 est incomplet.");
     }
     const source = await pool.query(
-      "SELECT source_system_id FROM bibliotheque.source_systems WHERE source_code = 'doab' AND is_active = TRUE"
+      "SELECT source_system_id FROM bibliotheque.source_systems WHERE source_code = $1 AND is_active = TRUE",
+      [args.source]
     );
-    if (!source.rows.length) throw new Error("Source DOAB inactive ou non enregistrée.");
+    if (!source.rows.length) throw new Error("Source " + args.source + " inactive ou non enregistrée. Appliquez d’abord la migration 011 sur la branche Neon de développement.");
 
     const job = await pool.query(
       `INSERT INTO bibliotheque.import_jobs (source_system_id, job_type, status, parameters)
@@ -484,6 +494,7 @@ async function main() {
        RETURNING import_job_id`,
       [source.rows[0].source_system_id, JSON.stringify({
         importer: "scripts/import-doab.mjs",
+        source: args.source,
         maxRecords: args.max,
         inputFile: args.input.split(/[\\\\/]/).pop(),
         execution: "manual-pilot",
@@ -495,7 +506,7 @@ async function main() {
     for (const record of unique) {
       if (!record.externalRecordId) {
         totals.failed += 1;
-        process.stderr.write("Notice ignorée : identifiant externe DOAB manquant.\n");
+        process.stderr.write("Notice ignorée : identifiant externe manquant.\n");
         continue;
       }
       const result = await importOne(pool, source.rows[0].source_system_id, jobId, record);

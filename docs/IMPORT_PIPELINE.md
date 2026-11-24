@@ -130,3 +130,31 @@ Après chaque lot, exécuter ce protocole sur la même branche Neon de développ
 - `--limit` : nombre maximal demandé à l'API ; 25 par défaut, maximum 500.
 - `--output` : chemin du fichier JSON local.
 - Le collecteur développe uniquement les métadonnées (`expand=metadata)). Il ne demande jamais `expand=bitstreams`.
+
+## OpenAlex — livres académiques
+
+Le connecteur scripts/fetch-openalex.mjs utilise l'endpoint officiel https://api.openalex.org/works et le filtre type:book. La plage de publication est limitée par défaut à 1720–2026. Il n'applique pas open_access.is_oa:true par défaut : une notice bibliographique ne doit pas être éliminée parce que la disponibilité d'un fichier est absente ou inconnue. Les chapitres ne sont pas inclus dans ce flux de livres.
+
+```bash
+node scripts/fetch-openalex.mjs --limit 25 --from-year 1720 --to-year 2026 --output ./openalex-batch.json
+node scripts/import-doab.mjs --source openalex --input ./openalex-batch.json --max-records 25 --dry-run
+```
+
+La première page peut être consultée sans clé. Les pages suivantes par curseur exigent une clé API OpenAlex gratuite dans la variable locale OPENALEX_API_KEY. Le connecteur ne l'affiche pas et ne l'enregistre pas dans le fichier exporté. --limit est plafonné à 100 par page. Le normaliseur conserve l'identifiant OpenAlex et le record brut, valide les DOI/ISBN présents, et ne fabrique ni auteur, ni éditeur, ni ISBN lorsqu'ils manquent. La licence CC0 documentée pour les données OpenAlex concerne les données bibliographiques ; elle ne transforme pas automatiquement un fichier lié en ressource téléchargeable ou redistribuable.
+
+## HAL — ouvrages déposés
+
+Le connecteur scripts/fetch-hal.mjs utilise le point d'entrée officiel https://api.archives-ouvertes.fr/search/, le format JSON, le filtre docType_s:OUV et un tri par docid asc pour permettre une reprise avec cursorMark. Les pages sont plafonnées à 500 notices, conformément aux recommandations de performance de la documentation HAL. Les champs de fichiers ne sont volontairement pas demandés.
+
+```bash
+node scripts/fetch-hal.mjs --limit 50 --from-year 1720 --to-year 2026 --output ./hal-batch.json
+node scripts/import-doab.mjs --source hal --input ./hal-batch.json --max-records 50 --dry-run
+```
+
+HAL distingue les ouvrages (OUV) des chapitres (COUV) et des autres types documentaires. Le pilote ne prend que OUV. Les notices sans langue, année ou contributeur restent signalées pour revue. Les mentions de licence sont conservées comme preuves textuelles ; elles ne créent aucun droit implicite sur le PDF ou l'EPUB.
+
+## Registre des sources et état de déploiement
+
+La migration db/migrations/011_register_openalex_hal.sql enregistre ces deux sources dans bibliotheque.source_systems. Elle est préparée dans le dépôt mais n'a pas été appliquée à Neon. L'option --apply ne fonctionnera pour OpenAlex ou HAL qu'après revue et application explicite de cette migration sur la branche Neon de développement. La branche de production reste hors périmètre.
+
+Les commandes d'import ci-dessus sont en --dry-run. Elles n'ouvrent aucune connexion Neon. Avant toute écriture, conserver les contrôles de rôle, de droits, d'idempotence, de doublons d'identifiants et le protocole PVI-001. Ne jamais confondre le nombre total de Works OpenAlex, de notices HAL ou de notices de dépôt avec un nombre de livres uniques validés.

@@ -20,9 +20,9 @@ function parseArgs(argv) {
 
 function printHelp() {
   process.stdout.write(
-    "Récupération ciblée de métadonnées DOAB (JSON uniquement)\\n\\n" +
-    "node scripts/fetch-doab-json.mjs --query 'mathematics AND physics' --output ./doab-batch.json\\n\\n" +
-    "Une seule requête ciblée est envoyée. Aucun fichier PDF/EPUB n'est téléchargé.\\n"
+    "Récupération ciblée de métadonnées DOAB (JSON uniquement)\n\n" +
+    "node scripts/fetch-doab-json.mjs --query 'mathematics AND physics' --output ./doab-batch.json\n\n" +
+    "Une seule requête ciblée est envoyée. Aucun fichier PDF/EPUB n'est téléchargé.\n"
   );
 }
 
@@ -56,7 +56,7 @@ async function main() {
     throw new Error("La requête DOAB n'a renvoyé aucune notice exploitable.");
   }
 
-  await writeFile(args.output, JSON.stringify(payload, null, 2) + "\\n", "utf8");
+  await writeFile(args.output, JSON.stringify(payload, null, 2) + "\n", "utf8");
   const incomplete = records.filter((record) => record.issues.length > 0).length;
   process.stdout.write(JSON.stringify({
     source: "doab",
@@ -65,11 +65,11 @@ async function main() {
     recordsWithReviewIssues: incomplete,
     query: args.query.trim(),
     contentType,
-  }, null, 2) + "\\n");
-  process.stdout.write("Aucune donnée n'a été importée dans Neon. Lancez ensuite le dry-run de l'importateur.\\n");
+  }, null, 2) + "\n");
+  process.stdout.write("Aucune donnée n'a été importée dans Neon. Lancez ensuite le dry-run de l'importateur.\n");
 }
 
 main().catch((error) => {
-  process.stderr.write((error instanceof Error ? error.message : String(error)) + "\\n");
+  process.stderr.write((error instanceof Error ? error.message : String(error)) + "\n");
   process.exitCode = 1;
 });

@@ -7,17 +7,21 @@ const FEED_URL = "https://memo.doabooks.org/file/oapen/DOAB.json";
 const DEFAULT_LANGUAGES = new Set(["fr", "en", "es", "pt"]);
 
 function parseArgs(argv) {
-  const args = { output: "./doab-batch.json", limit: 25, allLanguages: false, help: false };
+  const args = { output: "./doab-batch.json", limit: 25, offset: 0, allLanguages: false, help: false };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--output") args.output = argv[++i] ?? args.output;
     else if (arg === "--limit") args.limit = Number(argv[++i]);
+    else if (arg === "--offset") args.offset = Number(argv[++i]);
     else if (arg === "--all-languages") args.allLanguages = true;
     else if (arg === "--help" || arg === "-h") args.help = true;
     else throw new Error("Argument inconnu : " + arg);
   }
   if (!Number.isInteger(args.limit) || args.limit < 1 || args.limit > 500) {
     throw new Error("--limit doit être compris entre 1 et 500.");
+  }
+  if (!Number.isInteger(args.offset) || args.offset < 0 || args.offset > 1_000_000) {
+    throw new Error("--offset doit être compris entre 0 et 1000000.");
   }
   return args;
 }
@@ -70,11 +74,18 @@ async function main() {
   const selection = await readJsonArrayItems(response.body, {
     arrayKey: "publications",
     limit: args.limit,
-    maxScanned: 100_000,
+    skip: args.offset,
+    maxScanned: Math.min(2_000_000, Math.max(100_000, args.offset + args.limit * 100 + 1_000)),
     acceptRecord: (record) => hasAcceptedLanguage(record, args.allLanguages),
   });
+  if (selection.skippedByOffset !== args.offset) {
+    throw new Error(
+      "Le flux s'est arrêté avant l'offset demandé : " + selection.skippedByOffset +
+      " notices admissibles sautées sur " + args.offset + "."
+    );
+  }
   if (selection.records.length === 0) {
-    throw new Error("Aucune notice DOAB ne correspond au filtre de langue dans les 100 000 premières notices.");
+    throw new Error("Aucune notice DOAB admissible après l'offset demandé.");
   }
 
   const payload = { publications: selection.records };
@@ -92,6 +103,8 @@ async function main() {
     feed: FEED_URL,
     output: args.output,
     recordsSelected: selection.records.length,
+    startOffset: args.offset,
+    recordsSkippedByOffset: selection.skippedByOffset,
     recordsScanned: selection.scanned,
     recordsSkippedByLanguage: selection.rejected,
     recordsWithTitles: withTitles,

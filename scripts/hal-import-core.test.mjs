@@ -14,7 +14,7 @@ const document = {
   keyword_s: ["physique", "mécanique classique"],
   domain_s: ["physique"],
   doiId_s: ["10.1234/hal.book"],
-  isbn_s: ["978-0-306-40615-7"],
+  isbn_s: "9782746222168, 9782746236691",
   licence_s: ["CC-BY"],
   uri_s: "https://hal.science/hal-01234567",
   docType_s: "OUV",
@@ -28,7 +28,7 @@ test("maps a HAL book into the shared source-record contract", () => {
   assert.equal(record.language, "fr");
   assert.deepEqual(record.authors, ["Marie Exemple", "Jean Test"]);
   assert.equal(record.publisher, "Éditions scientifiques");
-  assert.deepEqual(record.isbns, ["9780306406157"]);
+  assert.deepEqual(record.isbns, ["9782746222168", "9782746236691"]);
   assert.deepEqual(record.dois, ["10.1234/hal.book"]);
   assert.deepEqual(record.rightsEvidence, ["CC-BY"]);
   assert.deepEqual(record.issues, []);
@@ -59,4 +59,18 @@ test("normalizes HAL's response.docs envelope", () => {
 
 test("rejects an unknown HAL response wrapper", () => {
   assert.throws(() => normalizeHalPayload({ data: [] }), /Format HAL non reconnu/);
+});
+
+test("splits comma-separated ISBN values returned by HAL Solr", () => {
+  const record = mapHalRecord({
+    docid: "multi-isbn",
+    title_s: ["A book with two editions"],
+    language_s: ["fr"],
+    producedDateY_i: 2020,
+    authFullName_s: ["Example Author"],
+    docType_s: "OUV",
+    isbn_s: "9782746222168, 9782746236691",
+  });
+  assert.deepEqual(record.isbns, ["9782746222168", "9782746236691"]);
+  assert.deepEqual(record.issues, []);
 });

@@ -210,7 +210,9 @@ export async function scanOpenLibraryDumps(options) {
   const workStream = createWriteStream(worksTemp, { flags: "a" });
   const authorStream = createWriteStream(authorsTemp, { flags: "a" });
   const selectedWorkIds = new Set(priorEditions.flatMap((record) => record.work_keys ?? []));
+  for (const id of workIds) selectedWorkIds.delete(id);
   const selectedAuthorIds = new Set(priorWorks.flatMap((record) => record.author_keys ?? []));
+  for (const id of authorIds) selectedAuthorIds.delete(id);
   const editionStats = {
     scanned: 0,
     selected: priorEditions.length,
@@ -256,6 +258,7 @@ export async function scanOpenLibraryDumps(options) {
       if (classification === "review_missing_year") editionStats.reviewMissingYear += 1;
       if (!year) editionStats.missingYear += 1;
 
+      if (editionStats.selected >= maxEditions && !editionIds.has(keyId(row.key, "M"))) break;
       if (priorEditions.length === 0 && editionStats.skippedBeforeSample < skipMatching) {
         editionStats.skippedBeforeSample += 1;
         continue;

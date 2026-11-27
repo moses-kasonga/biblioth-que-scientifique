@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createReadStream, createWriteStream } from "node:fs";
-import { mkdir, rename, writeFile, readFile } from "node:fs/promises";
+import { mkdir, rename, writeFile, readFile, stat, unlink } from "node:fs/promises";
 import { createGunzip } from "node:zlib";
 import { createInterface } from "node:readline";
 import { once } from "node:events";
@@ -195,6 +195,41 @@ export async function scanOpenLibraryDumps(options) {
   const editionsTemp = editionsPath + ".partial";
   const worksTemp = worksPath + ".partial";
   const authorsTemp = authorsPath + ".partial";
+  const resumeManifestPath = resolve(outDir, "openlibrary-dump-scan-resume.json");
+  const inputFingerprints = {};
+  for (const [label, path] of Object.entries({ editions, works, authors })) {
+    const info = await stat(path);
+    inputFingerprints[label] = { path: resolve(path), size: info.size, mtimeMs: info.mtimeMs };
+  }
+  const resumeSignature = {
+    inputFingerprints,
+    fromYear,
+    toYear,
+    maxEditions,
+    skipMatching,
+  };
+  if (options.resume === false) {
+    for (const path of [editionsTemp, worksTemp, authorsTemp, resumeManifestPath]) {
+      try { await unlink(path); } catch (error) { if (error?.code !== "ENOENT") throw error; }
+    }
+  }
+  const partialFiles = [editionsTemp, worksTemp, authorsTemp];
+  const existingPartials = [];
+  for (const path of partialFiles) {
+    try { await stat(path); existingPartials.push(path); } catch (error) { if (error?.code !== "ENOENT") throw error; }
+  }
+  let previousSignature = null;
+  try { previousSignature = JSON.parse(await readFile(resumeManifestPath, "utf8")); }
+  catch (error) { if (error?.code !== "ENOENT") throw new Error("Manifeste de reprise illisible : " + error.message); }
+  if (existingPartials.length && !previousSignature) {
+    throw new Error("Fichiers .partial présents sans manifeste de reprise : refuse de mélanger des sources ou paramètres inconnus. Utiliser --no-resume pour repartir proprement.");
+  }
+  if (previousSignature && JSON.stringify(previousSignature) !== JSON.stringify(resumeSignature)) {
+    throw new Error("Les dumps ou paramètres ne correspondent pas au manifeste de reprise. Utiliser --no-resume pour repartir proprement.");
+  }
+  const manifestTemp = resumeManifestPath + ".partial";
+  await writeFile(manifestTemp, JSON.stringify(resumeSignature, null, 2) + "\n", "utf8");
+  await rename(manifestTemp, resumeManifestPath);
   const priorEditions = options.resume === false ? [] : await readJsonlIfExists(editionsTemp);
   const priorWorks = options.resume === false ? [] : await readJsonlIfExists(worksTemp);
   const priorAuthors = options.resume === false ? [] : await readJsonlIfExists(authorsTemp);
@@ -388,6 +423,7 @@ export async function scanOpenLibraryDumps(options) {
   const reportTemp = reportPath + ".partial";
   await writeFile(reportTemp, JSON.stringify(report, null, 2) + "\n", "utf8");
   await rename(reportTemp, reportPath);
+  await unlink(resumeManifestPath);
   return report;
 }
 

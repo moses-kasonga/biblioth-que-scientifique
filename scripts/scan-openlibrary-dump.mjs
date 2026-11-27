@@ -104,7 +104,7 @@ function classifyEdition(record, year, fromYear, toYear) {
   return "selected";
 }
 
-function normalizeEdition(row, raw) {
+function normalizeEdition(row, raw, classification = "selected") {
   const editionId = keyId(row.key, "M");
   const year = parsePublicationYear(raw.publish_date);
   const subjects = Array.isArray(raw.subjects) ? raw.subjects.map(String) : [];
@@ -136,6 +136,7 @@ function normalizeEdition(row, raw) {
     external_record_id: editionId,
     source_record_version: row.revision || row.lastModified || "unknown",
     publication_year: year,
+    selection_status: classification === "review_missing_year" ? "review_required" : "selected",
     title: String(raw.title ?? "").trim(),
     publisher_names: Array.isArray(raw.publishers) ? raw.publishers.map(String) : [],
     language_codes: languages,
@@ -223,7 +224,7 @@ export async function scanOpenLibraryDumps(options) {
         editionStats.skippedBeforeSample += 1;
         continue;
       }
-      const normalized = normalizeEdition(row, raw);
+      const normalized = normalizeEdition(row, raw, classification);
       if (!normalized.external_record_id) { editionStats.missingEditionKey += 1; continue; }
 
       if (!normalized.work_keys.length) editionStats.withoutWorkLink += 1;

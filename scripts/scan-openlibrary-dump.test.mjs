@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile, stat } from "node:fs/promises";
 import { gzipSync } from "node:zlib";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -113,6 +113,14 @@ test("streams edition and work dumps into separate JSONL files", async () => {
     assert.deepEqual(authors[0].alternate_names, ["A. Author"]);
 
     // Simulate an interrupted run that left durable partial JSONL outputs.
+    const inputFingerprints = {};
+    for (const [label, path] of Object.entries({ editions: editionsPath, works: worksPath, authors: authorsPath })) {
+      const info = await stat(path);
+      inputFingerprints[label] = { path, size: info.size, mtimeMs: info.mtimeMs };
+    }
+    await writeFile(join(dir, "out", "openlibrary-dump-scan-resume.json"), JSON.stringify({
+      inputFingerprints, fromYear: 1720, toYear: 2026, maxEditions: 100, skipMatching: 0,
+    }));
     await writeFile(report.output.editionsPath + ".partial", await readFile(report.output.editionsPath));
     await writeFile(report.output.worksPath + ".partial", await readFile(report.output.worksPath));
     await writeFile(report.output.authorsPath + ".partial", await readFile(report.output.authorsPath));

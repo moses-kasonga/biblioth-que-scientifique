@@ -247,6 +247,7 @@ export async function scanOpenLibraryDumps(options) {
       const row = splitDumpLine(line);
       if (!row || row.type !== "/type/edition") continue;
       editionStats.scanned += 1;
+      if (editionIds.has(keyId(row.key, "M"))) continue;
       let raw;
       try { raw = JSON.parse(row.json); }
       catch { editionStats.malformed += 1; continue; }

@@ -1,0 +1,49 @@
+name: Open Library scanner checks
+
+on:
+  pull_request:
+    branches:
+      - add-open-library-scanner
+    paths:
+      - "scripts/scan-openlibrary-dump.mjs"
+      - "scripts/scan-openlibrary-dump.test.mjs"
+      - "scripts/doab-import-core.mjs"
+      - "package.json"
+      - ".github/workflows/openlibrary-scanner-check.yml"
+  push:
+    branches:
+      - fix/openlibrary-scanner-resume
+    paths:
+      - "scripts/scan-openlibrary-dump.mjs"
+      - "scripts/scan-openlibrary-dump.test.mjs"
+      - "scripts/doab-import-core.mjs"
+      - "package.json"
+      - ".github/workflows/openlibrary-scanner-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  scanner:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Run automated tests
+        run: npm test
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build

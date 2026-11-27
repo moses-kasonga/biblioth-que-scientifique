@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createReadStream, createWriteStream } from "node:fs";
-import { mkdir, rename, writeFile } from "node:fs/promises";
+import { mkdir, rename, writeFile, readFile } from "node:fs/promises";
 import { createGunzip } from "node:zlib";
 import { createInterface } from "node:readline";
 import { once } from "node:events";
@@ -21,6 +21,7 @@ function parseArgs(argv) {
     skipMatching: 0,
     outDir: "./openlibrary-dump-scan",
     help: false,
+    resume: true,
   };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -32,6 +33,7 @@ function parseArgs(argv) {
     else if (arg === "--max-editions") args.maxEditions = Number(argv[++i]);
     else if (arg === "--skip-matching") args.skipMatching = Number(argv[++i]);
     else if (arg === "--out-dir") args.outDir = argv[++i] ?? args.outDir;
+    else if (arg === "--no-resume") args.resume = false;
     else if (arg === "--help" || arg === "-h") args.help = true;
     else throw new Error("Argument inconnu : " + arg);
   }
@@ -170,6 +172,16 @@ async function* iterateDump(path) {
   for await (const line of lines) yield line;
 }
 
+async function readJsonlIfExists(path) {
+  try {
+    const content = await readFile(path, "utf8");
+    return content.split("\n").filter(Boolean).map((line) => JSON.parse(line));
+  } catch (error) {
+    if (error?.code === "ENOENT") return [];
+    throw new Error("Fichier de reprise illisible (" + path + ") : " + error.message);
+  }
+}
+
 async function writeJsonLine(stream, record) {
   if (!stream.write(JSON.stringify(record) + "\n")) await once(stream, "drain");
 }
@@ -183,14 +195,26 @@ export async function scanOpenLibraryDumps(options) {
   const editionsTemp = editionsPath + ".partial";
   const worksTemp = worksPath + ".partial";
   const authorsTemp = authorsPath + ".partial";
-  const editionStream = createWriteStream(editionsTemp, { flags: "w" });
-  const workStream = createWriteStream(worksTemp, { flags: "w" });
-  const authorStream = createWriteStream(authorsTemp, { flags: "w" });
-  const selectedWorkIds = new Set();
-  const selectedAuthorIds = new Set();
+  const priorEditions = options.resume === false ? [] : await readJsonlIfExists(editionsTemp);
+  const priorWorks = options.resume === false ? [] : await readJsonlIfExists(worksTemp);
+  const priorAuthors = options.resume === false ? [] : await readJsonlIfExists(authorsTemp);
+  if (options.resume === false) {
+    await writeFile(editionsTemp, "");
+    await writeFile(worksTemp, "");
+    await writeFile(authorsTemp, "");
+  }
+  const editionIds = new Set(priorEditions.map((record) => record.external_record_id).filter(Boolean));
+  const workIds = new Set(priorWorks.map((record) => record.external_record_id).filter(Boolean));
+  const authorIds = new Set(priorAuthors.map((record) => record.external_record_id).filter(Boolean));
+  const editionStream = createWriteStream(editionsTemp, { flags: "a" });
+  const workStream = createWriteStream(worksTemp, { flags: "a" });
+  const authorStream = createWriteStream(authorsTemp, { flags: "a" });
+  const selectedWorkIds = new Set(priorEditions.flatMap((record) => record.work_keys ?? []));
+  const selectedAuthorIds = new Set(priorWorks.flatMap((record) => record.author_keys ?? []));
   const editionStats = {
     scanned: 0,
-    selected: 0,
+    selected: priorEditions.length,
+    resumed: priorEditions.length,
     skippedBeforeSample: 0,
     missingYear: 0,
     outsideYearWindow: 0,
@@ -201,8 +225,20 @@ export async function scanOpenLibraryDumps(options) {
     withoutWorkLink: 0,
     isbnValues: 0,
     validIsbnValues: 0,
-    languages: {},
+    languages: priorEditions.reduce((counts, record) => {
+      for (const language of record.language_codes ?? []) counts[language] = (counts[language] || 0) + 1;
+      return counts;
+    }, {}),
   };
+  for (const record of priorEditions) {
+    editionStats.isbnValues += (record.isbn_identifiers ?? []).length;
+    editionStats.validIsbnValues += (record.isbn_identifiers ?? []).length;
+    if (!record.work_keys?.length) editionStats.withoutWorkLink += 1;
+    if (record.selection_status === "review_required") {
+      editionStats.reviewMissingYear += 1;
+      editionStats.missingYear += 1;
+    }
+  }
 
   try {
     for await (const line of iterateDump(editions)) {
@@ -220,12 +256,13 @@ export async function scanOpenLibraryDumps(options) {
       if (classification === "review_missing_year") editionStats.reviewMissingYear += 1;
       if (!year) editionStats.missingYear += 1;
 
-      if (editionStats.skippedBeforeSample < skipMatching) {
+      if (priorEditions.length === 0 && editionStats.skippedBeforeSample < skipMatching) {
         editionStats.skippedBeforeSample += 1;
         continue;
       }
       const normalized = normalizeEdition(row, raw, classification);
       if (!normalized.external_record_id) { editionStats.missingEditionKey += 1; continue; }
+      if (editionIds.has(normalized.external_record_id)) continue;
 
       if (!normalized.work_keys.length) editionStats.withoutWorkLink += 1;
       for (const workId of normalized.work_keys) selectedWorkIds.add(workId);
@@ -235,6 +272,7 @@ export async function scanOpenLibraryDumps(options) {
       editionStats.isbnValues += normalized.isbn_identifiers.length;
       editionStats.validIsbnValues += normalized.isbn_identifiers.length;
       await writeJsonLine(editionStream, normalized);
+      editionIds.add(normalized.external_record_id);
       editionStats.selected += 1;
       if (editionStats.selected >= maxEditions) break;
     }
@@ -243,14 +281,14 @@ export async function scanOpenLibraryDumps(options) {
     await once(editionStream, "finish");
   }
 
-  const workStats = { scanned: 0, selected: 0, malformed: 0, missingTitle: 0 };
+  const workStats = { scanned: 0, selected: priorWorks.length, resumed: priorWorks.length, malformed: 0, missingTitle: priorWorks.filter((record) => !record.title).length };
   try {
     if (selectedWorkIds.size) {
       for await (const line of iterateDump(works)) {
         const row = splitDumpLine(line);
         if (!row || row.type !== "/type/work") continue;
         const id = keyId(row.key, "W");
-        if (!id || !selectedWorkIds.has(id)) continue;
+        if (!id || !selectedWorkIds.has(id) || workIds.has(id)) continue;
         workStats.scanned += 1;
         let raw;
         try { raw = JSON.parse(row.json); }
@@ -259,6 +297,7 @@ export async function scanOpenLibraryDumps(options) {
         if (!normalized.title) workStats.missingTitle += 1;
         for (const authorId of normalized.author_keys) selectedAuthorIds.add(authorId);
         await writeJsonLine(workStream, normalized);
+        workIds.add(id);
         selectedWorkIds.delete(id);
         workStats.selected += 1;
         if (!selectedWorkIds.size) break;
@@ -269,14 +308,14 @@ export async function scanOpenLibraryDumps(options) {
     await once(workStream, "finish");
   }
 
-  const authorStats = { scanned: 0, selected: 0, malformed: 0, missingName: 0 };
+  const authorStats = { scanned: 0, selected: priorAuthors.length, resumed: priorAuthors.length, malformed: 0, missingName: priorAuthors.filter((record) => !record.preferred_name).length };
   try {
     if (selectedAuthorIds.size) {
       for await (const line of iterateDump(authors)) {
         const row = splitDumpLine(line);
         if (!row || row.type !== "/type/author") continue;
         const id = keyId(row.key, "A");
-        if (!id || !selectedAuthorIds.has(id)) continue;
+        if (!id || !selectedAuthorIds.has(id) || authorIds.has(id)) continue;
         authorStats.scanned += 1;
         let raw;
         try { raw = JSON.parse(row.json); }
@@ -296,6 +335,7 @@ export async function scanOpenLibraryDumps(options) {
         };
         if (!authorRecord.preferred_name) authorStats.missingName += 1;
         await writeJsonLine(authorStream, authorRecord);
+        authorIds.add(id);
         selectedAuthorIds.delete(id);
         authorStats.selected += 1;
         if (!selectedAuthorIds.size) break;
@@ -321,6 +361,7 @@ export async function scanOpenLibraryDumps(options) {
       maxEditions,
       skipMatching,
       selectionRule: "title, subtitle, description, notes, subjects and classification fields are searched; missing publication years are retained for review, not asserted to be in-range",
+      resumeMode: "append-only JSONL recovery with external-ID deduplication; compressed input is replayed from the beginning to rebuild stream position",
     },
     editions: editionStats,
     linkedWorks: {
@@ -334,7 +375,7 @@ export async function scanOpenLibraryDumps(options) {
       unresolvedAuthorKeys: selectedAuthorIds.size,
     },
     output: { editionsPath, worksPath, authorsPath },
-    note: "JSONL keeps Edition, Work and Author records separate and preserves each original payload. No catalogue entities are created.",
+    note: "JSONL keeps Edition, Work and Author records separate and preserves each original payload. No catalogue entities are created. On restart, completed records are retained and deduplicated; gzip streams are replayed from the beginning, so this is data-safe resume rather than byte-offset seeking.",
   };
   await rename(editionsTemp, editionsPath);
   await rename(worksTemp, worksPath);

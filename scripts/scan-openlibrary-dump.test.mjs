@@ -132,7 +132,7 @@ test("streams edition and work dumps into separate JSONL files", async () => {
     assert.equal(resumed.linkedWorks.unresolvedWorkKeys, 0);
     assert.equal(resumed.linkedAuthors.selected, 1);
     assert.equal(resumed.linkedAuthors.unresolvedAuthorKeys, 0);
-    const resumedEditions = (await readFile(resumed.output.editionsPath, "utf8")).trim().split("\\n").map(JSON.parse);
+    const resumedEditions = (await readFile(resumed.output.editionsPath, "utf8")).trim().split("\n").map(JSON.parse);
     assert.equal(new Set(resumedEditions.map((record) => record.external_record_id)).size, 3);
   } finally {
     await rm(dir, { recursive: true, force: true });

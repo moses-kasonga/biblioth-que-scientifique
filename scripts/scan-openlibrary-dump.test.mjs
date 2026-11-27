@@ -111,6 +111,29 @@ test("streams edition and work dumps into separate JSONL files", async () => {
     assert.deepEqual(authors.map((record) => record.external_record_id), ["OL1A"]);
     assert.equal(authors[0].preferred_name, "Ada Author");
     assert.deepEqual(authors[0].alternate_names, ["A. Author"]);
+
+    // Simulate an interrupted run that left durable partial JSONL outputs.
+    await writeFile(report.output.editionsPath + ".partial", await readFile(report.output.editionsPath));
+    await writeFile(report.output.worksPath + ".partial", await readFile(report.output.worksPath));
+    await writeFile(report.output.authorsPath + ".partial", await readFile(report.output.authorsPath));
+    const resumed = await scanOpenLibraryDumps({
+      editions: editionsPath,
+      works: worksPath,
+      authors: authorsPath,
+      fromYear: 1720,
+      toYear: 2026,
+      maxEditions: 100,
+      skipMatching: 0,
+      outDir: join(dir, "out"),
+    });
+    assert.equal(resumed.editions.selected, 3);
+    assert.equal(resumed.editions.resumed, 3);
+    assert.equal(resumed.linkedWorks.selected, 3);
+    assert.equal(resumed.linkedWorks.unresolvedWorkKeys, 0);
+    assert.equal(resumed.linkedAuthors.selected, 1);
+    assert.equal(resumed.linkedAuthors.unresolvedAuthorKeys, 0);
+    const resumedEditions = (await readFile(resumed.output.editionsPath, "utf8")).trim().split("\\n").map(JSON.parse);
+    assert.equal(new Set(resumedEditions.map((record) => record.external_record_id)).size, 3);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

@@ -40,7 +40,12 @@ test("streams edition and work dumps into separate JSONL files", async () => {
       subjects: ["Mathematics"],
       works: [{ key: "/works/OL12W" }],
     });
-    await writeFile(editionsPath, gzipSync([scientificEdition, nonScientificEdition, historicalEdition].join("\n") + "\n"));
+    const undatedScientificEdition = row("/type/edition", "/books/OL103M", 1, "2026-11-03T00:00:00.000000", {
+      title: "Introduction to quantum physics",
+      publishers: ["Research Press"],
+      works: [{ key: "/works/OL13W" }],
+    });
+    await writeFile(editionsPath, gzipSync([scientificEdition, nonScientificEdition, historicalEdition, undatedScientificEdition].join("\n") + "\n"));
 
     const work10 = row("/type/work", "/works/OL10W", 9, "2026-11-03T00:00:00.000000", {
       title: "A book about physics",
@@ -53,11 +58,15 @@ test("streams edition and work dumps into separate JSONL files", async () => {
       first_publish_date: "1790",
       subjects: ["Mathematics"],
     });
+    const work13 = row("/type/work", "/works/OL13W", 1, "2026-11-03T00:00:00.000000", {
+      title: "Introduction to quantum physics",
+      authors: [],
+    });
     const unrelatedWork = row("/type/work", "/works/OL99W", 1, "2026-11-03T00:00:00.000000", {
       title: "Unrelated work",
       subjects: ["Poetry"],
     });
-    await writeFile(worksPath, gzipSync([work10, work12, unrelatedWork].join("\n") + "\n"));
+    await writeFile(worksPath, gzipSync([work10, work12, work13, unrelatedWork].join("\n") + "\n"));
     const author1 = row("/type/author", "/authors/OL1A", 5, "2026-11-04T00:00:00.000000", {
       name: "Ada Author",
       alternate_names: ["A. Author"],
@@ -80,11 +89,13 @@ test("streams edition and work dumps into separate JSONL files", async () => {
       outDir: join(dir, "out"),
     });
 
-    assert.equal(report.editions.scanned, 3);
-    assert.equal(report.editions.selected, 2);
+    assert.equal(report.editions.scanned, 4);
+    assert.equal(report.editions.selected, 3);
     assert.equal(report.editions.nonScientific, 1);
+    assert.equal(report.editions.reviewMissingYear, 1);
+    assert.equal(report.editions.missingYear, 1);
     assert.equal(report.editions.validIsbnValues, 3);
-    assert.equal(report.linkedWorks.selected, 2);
+    assert.equal(report.linkedWorks.selected, 3);
     assert.equal(report.linkedWorks.unresolvedWorkKeys, 0);
     assert.equal(report.linkedAuthors.selected, 1);
     assert.equal(report.linkedAuthors.unresolvedAuthorKeys, 0);
@@ -92,10 +103,10 @@ test("streams edition and work dumps into separate JSONL files", async () => {
     const editions = (await readFile(report.output.editionsPath, "utf8")).trim().split("\n").map(JSON.parse);
     const works = (await readFile(report.output.worksPath, "utf8")).trim().split("\n").map(JSON.parse);
     const authors = (await readFile(report.output.authorsPath, "utf8")).trim().split("\n").map(JSON.parse);
-    assert.deepEqual(editions.map((record) => record.external_record_id), ["OL100M", "OL102M"]);
+    assert.deepEqual(editions.map((record) => record.external_record_id), ["OL100M", "OL102M", "OL103M"]);
     assert.deepEqual(editions[0].work_keys, ["OL10W"]);
     assert.deepEqual(editions[0].isbn_identifiers.map((item) => item.normalizedValue), ["0306406152", "9780306406157"]);
-    assert.deepEqual(works.map((record) => record.external_record_id), ["OL10W", "OL12W"]);
+    assert.deepEqual(works.map((record) => record.external_record_id), ["OL10W", "OL12W", "OL13W"]);
     assert.deepEqual(works[0].author_keys, ["OL1A"]);
     assert.deepEqual(authors.map((record) => record.external_record_id), ["OL1A"]);
     assert.equal(authors[0].preferred_name, "Ada Author");

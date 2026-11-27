@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createReadStream, createWriteStream } from "node:fs";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rename, writeFile } from "node:fs/promises";
 import { createGunzip } from "node:zlib";
 import { createInterface } from "node:readline";
 import { once } from "node:events";
@@ -336,8 +336,13 @@ export async function scanOpenLibraryDumps(options) {
     output: { editionsPath, worksPath, authorsPath },
     note: "JSONL keeps Edition, Work and Author records separate and preserves each original payload. No catalogue entities are created.",
   };
+  await rename(editionsTemp, editionsPath);
+  await rename(worksTemp, worksPath);
+  await rename(authorsTemp, authorsPath);
   const reportPath = resolve(outDir, "openlibrary-dump-scan-report.json");
-  await writeFile(reportPath, JSON.stringify(report, null, 2) + "\n", "utf8");
+  const reportTemp = reportPath + ".partial";
+  await writeFile(reportTemp, JSON.stringify(report, null, 2) + "\n", "utf8");
+  await rename(reportTemp, reportPath);
   return report;
 }
 

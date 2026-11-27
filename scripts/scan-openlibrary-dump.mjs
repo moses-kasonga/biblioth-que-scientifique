@@ -84,7 +84,24 @@ function authorKeysFromWork(raw) {
 
 function isScientific(record) {
   const subjects = Array.isArray(record?.subjects) ? record.subjects : [];
-  return subjects.some((subject) => SCIENCE_SUBJECT.test(String(subject)));
+  const textFields = [
+    record?.title,
+    record?.subtitle,
+    record?.description,
+    ...(Array.isArray(record?.notes) ? record.notes : [record?.notes]),
+    ...subjects,
+    record?.lc_classifications,
+    record?.dewey_decimal_class,
+  ];
+  const searchable = textFields.flat(Infinity).filter(Boolean).map(String);
+  return searchable.some((value) => SCIENCE_SUBJECT.test(value));
+}
+
+function classifyEdition(record, year, fromYear, toYear) {
+  if (year && (year < fromYear || year > toYear)) return "outside_year_window";
+  if (!isScientific(record)) return "non_scientific";
+  if (!year) return "review_missing_year";
+  return "selected";
 }
 
 function normalizeEdition(row, raw) {
@@ -162,9 +179,12 @@ export async function scanOpenLibraryDumps(options) {
   const editionsPath = resolve(outDir, "openlibrary-editions.jsonl");
   const worksPath = resolve(outDir, "openlibrary-works.jsonl");
   const authorsPath = resolve(outDir, "openlibrary-authors.jsonl");
-  const editionStream = createWriteStream(editionsPath, { flags: "w" });
-  const workStream = createWriteStream(worksPath, { flags: "w" });
-  const authorStream = createWriteStream(authorsPath, { flags: "w" });
+  const editionsTemp = editionsPath + ".partial";
+  const worksTemp = worksPath + ".partial";
+  const authorsTemp = authorsPath + ".partial";
+  const editionStream = createWriteStream(editionsTemp, { flags: "w" });
+  const workStream = createWriteStream(worksTemp, { flags: "w" });
+  const authorStream = createWriteStream(authorsTemp, { flags: "w" });
   const selectedWorkIds = new Set();
   const selectedAuthorIds = new Set();
   const editionStats = {
@@ -174,6 +194,7 @@ export async function scanOpenLibraryDumps(options) {
     missingYear: 0,
     outsideYearWindow: 0,
     nonScientific: 0,
+    reviewMissingYear: 0,
     malformed: 0,
     missingEditionKey: 0,
     withoutWorkLink: 0,
@@ -192,9 +213,11 @@ export async function scanOpenLibraryDumps(options) {
       catch { editionStats.malformed += 1; continue; }
 
       const year = parsePublicationYear(raw.publish_date);
-      if (!year) { editionStats.missingYear += 1; continue; }
-      if (year < fromYear || year > toYear) { editionStats.outsideYearWindow += 1; continue; }
-      if (!isScientific(raw)) { editionStats.nonScientific += 1; continue; }
+      const classification = classifyEdition(raw, year, fromYear, toYear);
+      if (classification === "outside_year_window") { editionStats.outsideYearWindow += 1; continue; }
+      if (classification === "non_scientific") { editionStats.nonScientific += 1; continue; }
+      if (classification === "review_missing_year") editionStats.reviewMissingYear += 1;
+      if (!year) editionStats.missingYear += 1;
 
       if (editionStats.skippedBeforeSample < skipMatching) {
         editionStats.skippedBeforeSample += 1;
@@ -296,7 +319,7 @@ export async function scanOpenLibraryDumps(options) {
       toYear,
       maxEditions,
       skipMatching,
-      subjectRule: "at least one subject matches the built-in science and research subject pattern",
+      selectionRule: "title, subtitle, description, notes, subjects and classification fields are searched; missing publication years are retained for review, not asserted to be in-range",
     },
     editions: editionStats,
     linkedWorks: {

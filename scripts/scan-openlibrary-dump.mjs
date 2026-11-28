@@ -236,7 +236,7 @@ export async function scanOpenLibraryDumps(options) {
   }
   const editionIds = new Set(), workIds = new Set(), authorIds = new Set();
   const selectedWorkIds = new Set(), selectedAuthorIds = new Set();
-  const resumedStats = { editions: 0, works: 0, authors: 0, isbn: 0, withoutWork: 0, missingYear: 0, languages: {} };
+  const resumedStats = { editions: 0, works: 0, authors: 0, isbn: 0, withoutWork: 0, missingYear: 0, missingTitle: 0, missingName: 0, languages: {} };
   if (options.resume !== false) {
     for await (const record of readJsonlIfExists(editionsTemp)) {
       if (record.external_record_id) editionIds.add(record.external_record_id);
@@ -250,10 +250,12 @@ export async function scanOpenLibraryDumps(options) {
       if (record.external_record_id) workIds.add(record.external_record_id);
       for (const id of record.author_keys ?? []) selectedAuthorIds.add(id);
       resumedStats.works++;
+      if (!record.title) resumedStats.missingTitle++;
     }
     for await (const record of readJsonlIfExists(authorsTemp)) {
       if (record.external_record_id) authorIds.add(record.external_record_id);
       resumedStats.authors++;
+      if (!record.preferred_name) resumedStats.missingName++;
     }
   }
   for (const id of workIds) selectedWorkIds.delete(id);
@@ -306,7 +308,7 @@ export async function scanOpenLibraryDumps(options) {
     await once(editionStream, "finish");
   }
 
-  const workStats = { scanned: 0, selected: resumedStats.works, resumed: resumedStats.works, malformed: 0, missingTitle: 0 };
+  const workStats = { scanned: 0, selected: resumedStats.works, resumed: resumedStats.works, malformed: 0, missingTitle: resumedStats.missingTitle };
   try {
     if (selectedWorkIds.size) {
       for await (const line of iterateDump(works)) {
@@ -333,7 +335,7 @@ export async function scanOpenLibraryDumps(options) {
     await once(workStream, "finish");
   }
 
-  const authorStats = { scanned: 0, selected: resumedStats.authors, resumed: resumedStats.authors, malformed: 0, missingName: 0 };
+  const authorStats = { scanned: 0, selected: resumedStats.authors, resumed: resumedStats.authors, malformed: 0, missingName: resumedStats.missingName };
   try {
     if (selectedAuthorIds.size) {
       for await (const line of iterateDump(authors)) {

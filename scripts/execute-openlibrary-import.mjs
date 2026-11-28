@@ -10,7 +10,7 @@ import { verifyOpenLibraryPackage } from "./verify-openlibrary-package.mjs";
 import { verifyOpenLibraryImportPlan } from "./verify-openlibrary-import-plan.mjs";
 
 const { Pool } = pg;
-const EXPECTED_BRANCH = "br-bold-hall-be9s4awg";
+const EXPECTED_BRANCH = "br-lingering-mud-becn8dmd";
 const sha = (v) => createHash("sha256").update(v).digest("hex");
 const json = (v) => JSON.stringify(v);
 
@@ -202,7 +202,7 @@ async function main() {
   if (args.help) {
     process.stdout.write("Open Library source-record executor. Dry-run by default.\n\n" +
       "Dry-run: node scripts/execute-openlibrary-import.mjs\n" +
-      "Apply: NEXUS_IMPORT_ALLOWED_BRANCH_ID=br-bold-hall-be9s4awg node scripts/execute-openlibrary-import.mjs --apply --target-branch-id br-bold-hall-be9s4awg\n" +
+      "Apply: NEXUS_IMPORT_ALLOWED_BRANCH_ID=br-lingering-mud-becn8dmd node scripts/execute-openlibrary-import.mjs --apply --target-branch-id br-lingering-mud-becn8dmd\n" +
       "Resumes from the checkpoint; imports source records only. Canonical catalogue proposals are never executed.\n");
     return;
   }

@@ -261,10 +261,6 @@ export async function scanOpenLibraryDumps(options) {
   const editionStream = createWriteStream(editionsTemp, { flags: "a" });
   const workStream = createWriteStream(worksTemp, { flags: "a" });
   const authorStream = createWriteStream(authorsTemp, { flags: "a" });
-  const selectedWorkIds = new Set(priorEditions.flatMap((record) => record.work_keys ?? []));
-  for (const id of workIds) selectedWorkIds.delete(id);
-  const selectedAuthorIds = new Set(priorWorks.flatMap((record) => record.author_keys ?? []));
-  for (const id of authorIds) selectedAuthorIds.delete(id);
   const editionStats = { scanned: 0, selected: resumedStats.editions, resumed: resumedStats.editions, skippedBeforeSample: 0, missingYear: resumedStats.missingYear, outsideYearWindow: 0, nonScientific: 0, reviewMissingYear: resumedStats.missingYear, malformed: 0, missingEditionKey: 0, withoutWorkLink: resumedStats.withoutWork, isbnValues: resumedStats.isbn, validIsbnValues: resumedStats.isbn, languages: resumedStats.languages };
 
   try {

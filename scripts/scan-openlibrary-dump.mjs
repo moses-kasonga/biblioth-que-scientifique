@@ -172,12 +172,11 @@ async function* iterateDump(path) {
   for await (const line of lines) yield line;
 }
 
-async function readJsonlIfExists(path) {
+async function* readJsonlIfExists(path) {
   try {
-    const content = await readFile(path, "utf8");
-    return content.split("\n").filter(Boolean).map((line) => JSON.parse(line));
+    for await (const line of iterateDump(path)) if (line.trim()) yield JSON.parse(line);
   } catch (error) {
-    if (error?.code === "ENOENT") return [];
+    if (error?.code === "ENOENT") return;
     throw new Error("Fichier de reprise illisible (" + path + ") : " + error.message);
   }
 }
@@ -230,52 +229,41 @@ export async function scanOpenLibraryDumps(options) {
   const manifestTemp = resumeManifestPath + ".partial";
   await writeFile(manifestTemp, JSON.stringify(resumeSignature, null, 2) + "\n", "utf8");
   await rename(manifestTemp, resumeManifestPath);
-  const priorEditions = options.resume === false ? [] : await readJsonlIfExists(editionsTemp);
-  const priorWorks = options.resume === false ? [] : await readJsonlIfExists(worksTemp);
-  const priorAuthors = options.resume === false ? [] : await readJsonlIfExists(authorsTemp);
   if (options.resume === false) {
     await writeFile(editionsTemp, "");
     await writeFile(worksTemp, "");
     await writeFile(authorsTemp, "");
   }
-  const editionIds = new Set(priorEditions.map((record) => record.external_record_id).filter(Boolean));
-  const workIds = new Set(priorWorks.map((record) => record.external_record_id).filter(Boolean));
-  const authorIds = new Set(priorAuthors.map((record) => record.external_record_id).filter(Boolean));
+  const editionIds = new Set(), workIds = new Set(), authorIds = new Set();
+  const selectedWorkIds = new Set(), selectedAuthorIds = new Set();
+  const resumedStats = { editions: 0, works: 0, authors: 0, isbn: 0, withoutWork: 0, missingYear: 0, missingTitle: 0, missingName: 0, languages: {} };
+  if (options.resume !== false) {
+    for await (const record of readJsonlIfExists(editionsTemp)) {
+      if (record.external_record_id) editionIds.add(record.external_record_id);
+      for (const id of record.work_keys ?? []) selectedWorkIds.add(id);
+      resumedStats.editions++; resumedStats.isbn += (record.isbn_identifiers ?? []).length;
+      if (!record.work_keys?.length) resumedStats.withoutWork++;
+      if (record.selection_status === "review_required") resumedStats.missingYear++;
+      for (const language of record.language_codes ?? []) resumedStats.languages[language] = (resumedStats.languages[language] || 0) + 1;
+    }
+    for await (const record of readJsonlIfExists(worksTemp)) {
+      if (record.external_record_id) workIds.add(record.external_record_id);
+      for (const id of record.author_keys ?? []) selectedAuthorIds.add(id);
+      resumedStats.works++;
+      if (!record.title) resumedStats.missingTitle++;
+    }
+    for await (const record of readJsonlIfExists(authorsTemp)) {
+      if (record.external_record_id) authorIds.add(record.external_record_id);
+      resumedStats.authors++;
+      if (!record.preferred_name) resumedStats.missingName++;
+    }
+  }
+  for (const id of workIds) selectedWorkIds.delete(id);
+  for (const id of authorIds) selectedAuthorIds.delete(id);
   const editionStream = createWriteStream(editionsTemp, { flags: "a" });
   const workStream = createWriteStream(worksTemp, { flags: "a" });
   const authorStream = createWriteStream(authorsTemp, { flags: "a" });
-  const selectedWorkIds = new Set(priorEditions.flatMap((record) => record.work_keys ?? []));
-  for (const id of workIds) selectedWorkIds.delete(id);
-  const selectedAuthorIds = new Set(priorWorks.flatMap((record) => record.author_keys ?? []));
-  for (const id of authorIds) selectedAuthorIds.delete(id);
-  const editionStats = {
-    scanned: 0,
-    selected: priorEditions.length,
-    resumed: priorEditions.length,
-    skippedBeforeSample: 0,
-    missingYear: 0,
-    outsideYearWindow: 0,
-    nonScientific: 0,
-    reviewMissingYear: 0,
-    malformed: 0,
-    missingEditionKey: 0,
-    withoutWorkLink: 0,
-    isbnValues: 0,
-    validIsbnValues: 0,
-    languages: priorEditions.reduce((counts, record) => {
-      for (const language of record.language_codes ?? []) counts[language] = (counts[language] || 0) + 1;
-      return counts;
-    }, {}),
-  };
-  for (const record of priorEditions) {
-    editionStats.isbnValues += (record.isbn_identifiers ?? []).length;
-    editionStats.validIsbnValues += (record.isbn_identifiers ?? []).length;
-    if (!record.work_keys?.length) editionStats.withoutWorkLink += 1;
-    if (record.selection_status === "review_required") {
-      editionStats.reviewMissingYear += 1;
-      editionStats.missingYear += 1;
-    }
-  }
+  const editionStats = { scanned: 0, selected: resumedStats.editions, resumed: resumedStats.editions, skippedBeforeSample: 0, missingYear: resumedStats.missingYear, outsideYearWindow: 0, nonScientific: 0, reviewMissingYear: resumedStats.missingYear, malformed: 0, missingEditionKey: 0, withoutWorkLink: resumedStats.withoutWork, isbnValues: resumedStats.isbn, validIsbnValues: resumedStats.isbn, languages: resumedStats.languages };
 
   try {
     for await (const line of iterateDump(editions)) {
@@ -295,7 +283,7 @@ export async function scanOpenLibraryDumps(options) {
       if (!year) editionStats.missingYear += 1;
 
       if (editionStats.selected >= maxEditions && !editionIds.has(keyId(row.key, "M"))) break;
-      if (priorEditions.length === 0 && editionStats.skippedBeforeSample < skipMatching) {
+      if (resumedStats.editions === 0 && editionStats.skippedBeforeSample < skipMatching) {
         editionStats.skippedBeforeSample += 1;
         continue;
       }
@@ -320,7 +308,7 @@ export async function scanOpenLibraryDumps(options) {
     await once(editionStream, "finish");
   }
 
-  const workStats = { scanned: 0, selected: priorWorks.length, resumed: priorWorks.length, malformed: 0, missingTitle: priorWorks.filter((record) => !record.title).length };
+  const workStats = { scanned: 0, selected: resumedStats.works, resumed: resumedStats.works, malformed: 0, missingTitle: resumedStats.missingTitle };
   try {
     if (selectedWorkIds.size) {
       for await (const line of iterateDump(works)) {
@@ -347,7 +335,7 @@ export async function scanOpenLibraryDumps(options) {
     await once(workStream, "finish");
   }
 
-  const authorStats = { scanned: 0, selected: priorAuthors.length, resumed: priorAuthors.length, malformed: 0, missingName: priorAuthors.filter((record) => !record.preferred_name).length };
+  const authorStats = { scanned: 0, selected: resumedStats.authors, resumed: resumedStats.authors, malformed: 0, missingName: resumedStats.missingName };
   try {
     if (selectedAuthorIds.size) {
       for await (const line of iterateDump(authors)) {

@@ -59,8 +59,8 @@ test("streams edition and work dumps into separate JSONL files", async () => {
       subjects: ["Mathematics"],
     });
     const work13 = row("/type/work", "/works/OL13W", 1, "2026-11-03T00:00:00.000000", {
-      title: "Introduction to quantum physics",
-      authors: [],
+      title: "",
+      authors: [{ author: { key: "/authors/OL2A" } }],
     });
     const unrelatedWork = row("/type/work", "/works/OL99W", 1, "2026-11-03T00:00:00.000000", {
       title: "Unrelated work",
@@ -73,10 +73,13 @@ test("streams edition and work dumps into separate JSONL files", async () => {
       birth_date: "1970",
       remote_ids: { viaf: "12345" },
     });
+    const author2 = row("/type/author", "/authors/OL2A", 2, "2026-11-04T00:00:00.000000", {
+      alternate_names: ["Unknown author"],
+    });
     const unrelatedAuthor = row("/type/author", "/authors/OL99A", 1, "2026-11-04T00:00:00.000000", {
       name: "Unrelated Person",
     });
-    await writeFile(authorsPath, gzipSync([author1, unrelatedAuthor].join("\n") + "\n"));
+    await writeFile(authorsPath, gzipSync([author1, author2, unrelatedAuthor].join("\n") + "\n"));
 
     const report = await scanOpenLibraryDumps({
       editions: editionsPath,
@@ -96,8 +99,10 @@ test("streams edition and work dumps into separate JSONL files", async () => {
     assert.equal(report.editions.missingYear, 1);
     assert.equal(report.editions.validIsbnValues, 3);
     assert.equal(report.linkedWorks.selected, 3);
+    assert.equal(report.linkedWorks.missingTitle, 1);
     assert.equal(report.linkedWorks.unresolvedWorkKeys, 0);
-    assert.equal(report.linkedAuthors.selected, 1);
+    assert.equal(report.linkedAuthors.selected, 2);
+    assert.equal(report.linkedAuthors.missingName, 1);
     assert.equal(report.linkedAuthors.unresolvedAuthorKeys, 0);
 
     const editions = (await readFile(report.output.editionsPath, "utf8")).trim().split("\n").map(JSON.parse);
@@ -108,8 +113,9 @@ test("streams edition and work dumps into separate JSONL files", async () => {
     assert.deepEqual(editions[0].isbn_identifiers.map((item) => item.normalizedValue), ["0306406152", "9780306406157"]);
     assert.deepEqual(works.map((record) => record.external_record_id), ["OL10W", "OL12W", "OL13W"]);
     assert.deepEqual(works[0].author_keys, ["OL1A"]);
-    assert.deepEqual(authors.map((record) => record.external_record_id), ["OL1A"]);
+    assert.deepEqual(authors.map((record) => record.external_record_id), ["OL1A", "OL2A"]);
     assert.equal(authors[0].preferred_name, "Ada Author");
+    assert.equal(authors[1].preferred_name, "");
     assert.deepEqual(authors[0].alternate_names, ["A. Author"]);
 
     // Simulate an interrupted run that left durable partial JSONL outputs.
@@ -137,8 +143,10 @@ test("streams edition and work dumps into separate JSONL files", async () => {
     assert.equal(resumed.editions.selected, 3);
     assert.equal(resumed.editions.resumed, 3);
     assert.equal(resumed.linkedWorks.selected, 3);
+    assert.equal(resumed.linkedWorks.missingTitle, 1);
     assert.equal(resumed.linkedWorks.unresolvedWorkKeys, 0);
-    assert.equal(resumed.linkedAuthors.selected, 1);
+    assert.equal(resumed.linkedAuthors.selected, 2);
+    assert.equal(resumed.linkedAuthors.missingName, 1);
     assert.equal(resumed.linkedAuthors.unresolvedAuthorKeys, 0);
     const resumedEditions = (await readFile(resumed.output.editionsPath, "utf8")).trim().split("\n").map(JSON.parse);
     assert.equal(new Set(resumedEditions.map((record) => record.external_record_id)).size, 3);
